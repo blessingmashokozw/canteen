@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Meal;
 use App\Models\Order;
 use App\Models\OrderItem;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -42,6 +43,7 @@ class OrderController extends Controller
             'user_id' => $request->user()->id,
             'instructions' => $validated['instructions'] ?? null,
             'payment_method' => $validated['payment_method'],
+            'status' => 'pending',
         ]);
 
         // Create order items
@@ -58,7 +60,9 @@ class OrderController extends Controller
         }
 
         // Reload the order with relationships for the redirect
-        $order->load(['orderItems.meal', 'user']);
+        $order->load(['orderItems' => function ($query) {
+            $query->select(['id', 'order_id', 'meal_id', 'status_id', 'price', 'quantity', 'is_available', 'created_at', 'updated_at']);
+        }, 'orderItems.meal', 'user']);
 
         return redirect()->route('orders.show', $order->id)
             ->with('success', 'Order created successfully');
@@ -69,10 +73,25 @@ class OrderController extends Controller
      */
     public function show(Order $order): Response
     {
-        $order->load(['orderItems.meal', 'user']);
+        // Ensure status field is loaded
+        if (!$order->relationLoaded('orderItems')) {
+            $order->load(['orderItems' => function ($query) {
+                $query->select(['id', 'order_id', 'meal_id', 'status_id', 'price', 'quantity', 'is_available', 'created_at', 'updated_at']);
+            }, 'orderItems.meal', 'user']);
+        }
+
+        // Set default status if not set
+        if (is_null($order->status)) {
+            $order->status = 'pending';
+            $order->save();
+        }
 
         return Inertia::render('orders/show', [
             'order' => $order,
+            'flash' => [
+                'availability_success' => session('availability_success'),
+                'confirmation_success' => session('confirmation_success'),
+            ],
         ]);
     }
 
@@ -81,7 +100,9 @@ class OrderController extends Controller
      */
     public function index(Request $request): Response
     {
-        $query = Order::with(['orderItems.meal', 'user']);
+        $query = Order::with(['orderItems' => function ($query) {
+            $query->select(['id', 'order_id', 'meal_id', 'status_id', 'price', 'quantity', 'is_available', 'created_at', 'updated_at']);
+        }, 'orderItems.meal', 'user']);
 
         // Search by user name or email (for admin view, but currently showing user orders only)
         if ($request->filled('search')) {
@@ -106,6 +127,11 @@ class OrderController extends Controller
             $query->where('payment_method', $request->payment_method);
         }
 
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
         // Currently showing only user's orders, but this could be extended for admin
         $query->where('user_id', $request->user()->id);
 
@@ -113,7 +139,48 @@ class OrderController extends Controller
 
         return Inertia::render('orders/index', [
             'orders' => $orders,
-            'filters' => $request->only(['search', 'date_from', 'date_to', 'payment_method']),
+            'filters' => $request->only(['search', 'date_from', 'date_to', 'payment_method', 'status']),
         ]);
+    }
+
+    /**
+     * Confirm availability of an order item.
+     */
+    public function confirmAvailability(Request $request, Order $order, OrderItem $orderItem): RedirectResponse
+    {
+        // Ensure the order item belongs to the order
+        if ($orderItem->order_id !== $order->id) {
+            return back()->withErrors(['availability' => 'Order item not found']);
+        }
+
+        $validated = $request->validate([
+            'available' => ['required', 'boolean'],
+        ]);
+
+        // Update the order item's availability
+        $orderItem->update([
+            'is_available' => $validated['available'],
+        ]);
+
+        $message = $validated['available'] ? 'Item marked as available' : 'Item marked as not available';
+
+        return back()->with('availability_success', $message);
+    }
+
+    /**
+     * Confirm an order.
+     */
+    public function confirm(Order $order): RedirectResponse
+    {
+        // Only allow confirmation if order is in pending status
+        if ($order->status !== 'pending') {
+            return back()->withErrors(['confirmation' => 'Order cannot be confirmed in its current status']);
+        }
+
+        $order->update([
+            'status' => 'confirmed',
+        ]);
+
+        return back()->with('confirmation_success', 'Order has been confirmed successfully');
     }
 }

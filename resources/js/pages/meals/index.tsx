@@ -141,8 +141,8 @@ function UpdatePriceModal({ meal }: { meal: Meal }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="sm">
-                    <PencilIcon className="size-4" />
+                <Button variant="outline" className='cursor' size="sm" title='Edit Meal Price'>
+                   <PencilIcon className="size-4" /> Edit Price 
                 </Button>
             </DialogTrigger>
             <DialogContent>
@@ -223,7 +223,7 @@ export default function MealsIndex({ meals }: MealsIndexProps) {
                                     meals.map((meal) => (
                                         <TableRow key={meal.id}>
                                             <TableCell className="font-medium">{meal.name}</TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell className="text-right font-bold">
                                                 ${meal.price.toFixed(2)}
                                             </TableCell>
                                             <TableCell className="text-right">

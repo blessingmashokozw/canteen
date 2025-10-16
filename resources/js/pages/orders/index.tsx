@@ -30,7 +30,8 @@ import {
     CreditCardIcon,
     CalendarIcon,
     ChevronLeftIcon,
-    ChevronRightIcon
+    ChevronRightIcon,
+    EyeIcon
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -59,6 +60,7 @@ interface OrdersIndexProps {
         date_from?: string;
         date_to?: string;
         payment_method?: string;
+        status?: string;
     };
 }
 
@@ -67,6 +69,7 @@ export default function OrdersIndex({ orders, filters: initialFilters }: OrdersI
     const [dateFrom, setDateFrom] = useState(initialFilters.date_from || '');
     const [dateTo, setDateTo] = useState(initialFilters.date_to || '');
     const [paymentMethod, setPaymentMethod] = useState(initialFilters.payment_method || '');
+    const [status, setStatus] = useState(initialFilters.status || '');
     const [showFilters, setShowFilters] = useState(false);
 
     useEffect(() => {
@@ -74,6 +77,7 @@ export default function OrdersIndex({ orders, filters: initialFilters }: OrdersI
         setDateFrom(initialFilters.date_from || '');
         setDateTo(initialFilters.date_to || '');
         setPaymentMethod(initialFilters.payment_method || '');
+        setStatus(initialFilters.status || '');
     }, [initialFilters]);
 
     const handleFilter = () => {
@@ -82,6 +86,7 @@ export default function OrdersIndex({ orders, filters: initialFilters }: OrdersI
             date_from: dateFrom,
             date_to: dateTo,
             payment_method: paymentMethod,
+            status: status,
         }, {
             preserveState: true,
             preserveScroll: true,
@@ -93,13 +98,14 @@ export default function OrdersIndex({ orders, filters: initialFilters }: OrdersI
         setDateFrom('');
         setDateTo('');
         setPaymentMethod('');
+        setStatus('');
         router.get('/orders', {}, {
             preserveState: true,
             preserveScroll: true,
         });
     };
 
-    const hasActiveFilters = search || dateFrom || dateTo || paymentMethod;
+    const hasActiveFilters = search || dateFrom || dateTo || paymentMethod || status;
 
     const calculateTotal = (order: Order) => {
         return order.order_items?.reduce((sum, item) => {
@@ -217,6 +223,23 @@ export default function OrdersIndex({ orders, filters: initialFilters }: OrdersI
                                                 <option value="ONLINE_PAYMENT">Online Payment</option>
                                             </select>
                                         </div>
+
+                                        {/* Status */}
+                                        <div className="grid gap-2">
+                                            <Label>Status</Label>
+                                            <select
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                value={status}
+                                                onChange={(e) => setStatus(e.target.value)}
+                                            >
+                                                <option value="">All Statuses</option>
+                                                <option value="pending">Pending</option>
+                                                <option value="confirmed">Confirmed</option>
+                                                <option value="preparing">Preparing</option>
+                                                <option value="ready">Ready</option>
+                                                <option value="completed">Completed</option>
+                                            </select>
+                                        </div>
                                     </div>
                                     <div className="flex justify-end">
                                         <Button onClick={handleFilter}>Apply Filters</Button>
@@ -232,8 +255,10 @@ export default function OrdersIndex({ orders, filters: initialFilters }: OrdersI
                                     <TableRow>
                                         <TableHead>Order #</TableHead>
                                         <TableHead>Date</TableHead>
+                                        <TableHead>Customer</TableHead>
                                         <TableHead>Items</TableHead>
                                         <TableHead>Total</TableHead>
+                                        <TableHead>Status</TableHead>
                                         <TableHead>Payment</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
@@ -241,7 +266,7 @@ export default function OrdersIndex({ orders, filters: initialFilters }: OrdersI
                                 <TableBody>
                                     {orders.data.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center">
+                                            <TableCell colSpan={8} className="h-24 text-center">
                                                 No orders found.
                                             </TableCell>
                                         </TableRow>
@@ -256,11 +281,45 @@ export default function OrdersIndex({ orders, filters: initialFilters }: OrdersI
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex-shrink-0">
+                                                            {/* User Avatar */}
+                                                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                                                                {(order.user?.name || 'U').charAt(0).toUpperCase()}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-medium">{order.user?.name || 'Unknown'}</div>
+                                                            <div className="text-sm text-muted-foreground">{order.user?.email || ''}</div>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
                                                     {order.order_items?.length} item
                                                     {order.order_items?.length !== 1 ? 's' : ''}
                                                 </TableCell>
                                                 <TableCell>
                                                     ${calculateTotal(order).toFixed(2)}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge
+                                                        variant={
+                                                            order.status === 'confirmed'
+                                                                ? 'default'
+                                                                : order.status === 'pending'
+                                                                ? 'secondary'
+                                                                : 'outline'
+                                                        }
+                                                        className={
+                                                            order.status === 'confirmed'
+                                                                ? 'bg-green-100 text-green-800 hover:bg-green-100'
+                                                                : order.status === 'pending'
+                                                                ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'
+                                                                : ''
+                                                        }
+                                                    >
+                                                        {order.status === 'confirmed' ? 'Confirmed' : order.status === 'pending' ? 'Pending' : order.status || 'Unknown'}
+                                                    </Badge>
                                                 </TableCell>
                                                 <TableCell>
                                                     <Badge
@@ -281,12 +340,12 @@ export default function OrdersIndex({ orders, filters: initialFilters }: OrdersI
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <Button
-                                                        variant="ghost"
+                                                        variant="secondary"
                                                         size="sm"
                                                         asChild
                                                     >
                                                         <Link href={`/orders/${order.id}`}>
-                                                            View
+                                                            <EyeIcon /> View Order
                                                         </Link>
                                                     </Button>
                                                 </TableCell>

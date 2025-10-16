@@ -12,9 +12,14 @@ class Order extends Model
         'user_id',
         'instructions',
         'payment_method',
+        'status',
     ];
 
-    protected $appends = ['total'];
+    protected $casts = [
+        'status' => 'string',
+    ];
+
+    protected $appends = ['total', 'available_total'];
 
     public function user(): BelongsTo
     {
@@ -29,6 +34,13 @@ class Order extends Model
     public function getTotalAttribute(): float
     {
         return $this->orderItems->sum(function ($item) {
+            return $item->price * $item->quantity;
+        });
+    }
+
+    public function getAvailableTotalAttribute(): float
+    {
+        return $this->orderItems->where('is_available', true)->sum(function ($item) {
             return $item->price * $item->quantity;
         });
     }

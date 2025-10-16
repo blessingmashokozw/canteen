@@ -22,6 +22,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{order}/confirm', [OrderController::class, 'confirm'])->name('orders.confirm');
+    Route::post('/orders/{order}/items/{orderItem}/confirm-availability', [OrderController::class, 'confirmAvailability'])->name('orders.items.confirm-availability');
 });
 
 require __DIR__.'/settings.php';

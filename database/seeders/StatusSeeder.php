@@ -15,7 +15,7 @@ class StatusSeeder extends Seeder
     {
         $statuses = [
             'Pending',
-            'Preparing',
+            'Confirmed',
             'Ready',
             'Delivered',
             'Cancelled',

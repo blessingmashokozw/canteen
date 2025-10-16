@@ -121,12 +121,12 @@ export default function OrderCreate({ meals }: OrderCreateProps) {
                                             </p>
                                         </div>
                                         <Button
-                                            type="button"
+                                            type="button" 
                                             size="sm"
                                             onClick={() => addItem(meal.id)}
                                         >
-                                            <PlusIcon className="size-4 mr-1" />
-                                            Add
+                                           
+                                             <PlusIcon className="size-4" />
                                         </Button>
                                     </div>
                                 ))}

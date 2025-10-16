@@ -13,11 +13,13 @@ class OrderItem extends Model
         'status_id',
         'price',
         'quantity',
+        'is_available',
     ];
 
     protected $casts = [
         'price' => 'float',
         'quantity' => 'integer',
+        'is_available' => 'boolean',
     ];
 
     public function order(): BelongsTo

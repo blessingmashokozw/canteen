@@ -57,6 +57,7 @@ export interface OrderItem {
     status_id: number;
     price: number;
     quantity: number;
+    is_available?: boolean;
     meal?: Meal;
     created_at: string;
     updated_at: string;
@@ -67,9 +68,11 @@ export interface Order {
     user_id: number;
     instructions: string | null;
     payment_method: 'CASH' | 'ONLINE_PAYMENT';
+    status?: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed';
     user?: User;
     order_items?: OrderItem[];
     total?: number;
+    available_total?: number;
     created_at: string;
     updated_at: string;
 }

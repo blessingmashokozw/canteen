@@ -24,7 +24,7 @@ class MealsSeeder extends Seeder
         ];
 
         foreach ($meals as $meal) {
-            DB::table('meals')->insert([
+            DB::table('meals')->insertOrIgnore([
                 'name' => $meal['name'],
                 'price' => $meal['price'],
                 'created_at' => now(),
