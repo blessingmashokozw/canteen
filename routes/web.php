@@ -101,6 +101,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('/orders/{order}/confirm', [OrderController::class, 'confirm'])->name('orders.confirm');
+    Route::post('/orders/{order}/mark-completed', [OrderController::class, 'markAsCompleted'])->name('orders.mark-completed');
     Route::post('/orders/{order}/assign-slot', [OrderController::class, 'assignSlot'])->name('orders.assign-slot');
     Route::post('/orders/{order}/mark-delivered', [OrderController::class, 'markDelivered'])->name('orders.mark-delivered');
     Route::get('/orders/{order}/pay', [PaymentController::class, 'pay'])->name('orders.pay');

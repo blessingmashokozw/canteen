@@ -263,6 +263,39 @@ class OrderController extends Controller
         return back()->with('success', 'Collection slot assigned successfully');
     }
 
+     public function markAsCompleted(Request $request, Order $order)
+    {
+        // Only allow marking as completed if order is in ready status
+        if ($order->status !== 'ready') {
+            return back()->withErrors(['completion' => 'Only orders that are ready can be marked as completed']);
+        }
+
+        // Only admin and kitchen staff can mark orders as completed
+        if (!$request->user()->isAdmin() && !$request->user()->isKitchen()) {
+            return back()->withErrors(['completion' => 'You do not have permission to mark orders as completed']);
+        }
+
+        // Reduce stock for available items in the order (in case it wasn't done during payment)
+        $order->load('orderItems.meal');
+        foreach ($order->orderItems as $orderItem) {
+            if ($orderItem->is_available && $orderItem->meal) {
+                $orderItem->meal->reduceStock($orderItem->quantity);
+                Log::info("Stock reduced for meal #{$orderItem->meal->id} via completion", [
+                    'meal_name' => $orderItem->meal->name,
+                    'quantity_reduced' => $orderItem->quantity,
+                    'remaining_stock' => $orderItem->meal->stock_quantity,
+                    'order_id' => $order->id,
+                ]);
+            }
+        }
+
+        $order->update([
+            'status' => 'completed',
+        ]);
+
+        return back()->with('success', 'Order has been marked as completed');
+    }
+
     /**
      * Poll payment status for pending payments.
      */
