@@ -5,18 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\Meal;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Paynow\Payments\Paynow;
 use Inertia\Inertia;
-use Inertia\Response;
+use App\Models\CollectionSlot;
 
 class OrderController extends Controller
 {
     /**
      * Display the order creation form.
      */
-    public function create(): Response
+    public function create()
     {
         $meals = Meal::orderBy('name')->get();
 
@@ -28,7 +31,7 @@ class OrderController extends Controller
     /**
      * Store a newly created order.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request)
     {
         $validated = $request->validate([
             'instructions' => ['nullable', 'string', 'max:250'],
@@ -71,13 +74,15 @@ class OrderController extends Controller
     /**
      * Display the specified order.
      */
-    public function show(Order $order): Response
+    public function show(Request $request, Order $order)
     {
+
+        
         // Ensure status field is loaded
         if (!$order->relationLoaded('orderItems')) {
             $order->load(['orderItems' => function ($query) {
                 $query->select(['id', 'order_id', 'meal_id', 'status_id', 'price', 'quantity', 'is_available', 'created_at', 'updated_at']);
-            }, 'orderItems.meal', 'user']);
+            }, 'orderItems.meal', 'user', 'collectionSlot', 'payments']);
         }
 
         // Set default status if not set
@@ -86,8 +91,19 @@ class OrderController extends Controller
             $order->save();
         }
 
+        
+        if ($request->poll) {
+           
+            $poll = $this->pollPaymentStatus($request, $order);
+            //dd($poll);
+        }
         return Inertia::render('orders/show', [
             'order' => $order,
+            'user' => [
+                'is_admin' => $request->user()->isAdmin(),
+                'is_kitchen' => $request->user()->isKitchen(),
+                'role' => $request->user()->role,
+            ],
             'flash' => [
                 'availability_success' => session('availability_success'),
                 'confirmation_success' => session('confirmation_success'),
@@ -98,7 +114,7 @@ class OrderController extends Controller
     /**
      * Display a listing of orders with filters.
      */
-    public function index(Request $request): Response
+    public function index(Request $request)
     {
         $query = Order::with(['orderItems' => function ($query) {
             $query->select(['id', 'order_id', 'meal_id', 'status_id', 'price', 'quantity', 'is_available', 'created_at', 'updated_at']);
@@ -132,13 +148,37 @@ class OrderController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Currently showing only user's orders, but this could be extended for admin
-        $query->where('user_id', $request->user()->id);
+        // Currently showing only user's orders, but this could be extended for admin/kitchen staff to see all orders
+        if (!$request->user()->isAdmin() && !$request->user()->isKitchen()) {
+            $query->where('user_id', $request->user()->id);
+        }
 
         $orders = $query->latest()->paginate(10)->withQueryString();
 
+        // Get summary statistics - show all orders for admin/kitchen staff, user orders for customers
+        $userId = ($request->user()->isAdmin() || $request->user()->isKitchen()) ? null : $request->user()->id;
+
+        $stats = [
+            'total_orders' => Order::when($userId, fn($query) => $query->where('user_id', $userId))->count(),
+            'pending_orders' => Order::when($userId, fn($query) => $query->where('user_id', $userId))->where('status', 'pending')->count(),
+            'confirmed_orders' => Order::when($userId, fn($query) => $query->where('user_id', $userId))->where('status', 'confirmed')->count(),
+            'preparing_orders' => Order::when($userId, fn($query) => $query->where('user_id', $userId))->where('status', 'preparing')->count(),
+            'ready_orders' => Order::when($userId, fn($query) => $query->where('user_id', $userId))->where('status', 'ready')->count(),
+            'completed_orders' => Order::when($userId, fn($query) => $query->where('user_id', $userId))->where('status', 'completed')->count(),
+            'cancelled_orders' => Order::when($userId, fn($query) => $query->where('user_id', $userId))->where('status', 'cancelled')->count(),
+            'total_amount' => Order::when($userId, fn($query) => $query->where('user_id', $userId))
+                ->with('orderItems')
+                ->get()
+                ->sum(function ($order) {
+                    return $order->orderItems->sum(function ($item) {
+                        return $item->price * $item->quantity;
+                    });
+                }),
+        ];
+
         return Inertia::render('orders/index', [
             'orders' => $orders,
+            'stats' => $stats,
             'filters' => $request->only(['search', 'date_from', 'date_to', 'payment_method', 'status']),
         ]);
     }
@@ -146,7 +186,7 @@ class OrderController extends Controller
     /**
      * Confirm availability of an order item.
      */
-    public function confirmAvailability(Request $request, Order $order, OrderItem $orderItem): RedirectResponse
+    public function confirmAvailability(Request $request, Order $order, OrderItem $orderItem)
     {
         // Ensure the order item belongs to the order
         if ($orderItem->order_id !== $order->id) {
@@ -170,8 +210,13 @@ class OrderController extends Controller
     /**
      * Confirm an order.
      */
-    public function confirm(Order $order): RedirectResponse
+    public function confirm(Request $request, Order $order)
     {
+        // Only admin and kitchen staff can confirm orders
+        if (!$request->user()->isAdmin() && !$request->user()->isKitchen()) {
+            return back()->withErrors(['confirmation' => 'You do not have permission to confirm orders']);
+        }
+
         // Only allow confirmation if order is in pending status
         if ($order->status !== 'pending') {
             return back()->withErrors(['confirmation' => 'Order cannot be confirmed in its current status']);
@@ -182,5 +227,109 @@ class OrderController extends Controller
         ]);
 
         return back()->with('confirmation_success', 'Order has been confirmed successfully');
+    }
+
+    /**
+     * Assign a collection slot to an order.
+     */
+    public function assignSlot(Request $request, Order $order)
+    {
+        // Only allow slot assignment if order is in ready status
+        if ($order->status !== 'ready') {
+            return back()->withErrors(['slot_assignment' => 'Only orders that are ready can have collection slots assigned']);
+        }
+
+        $validated = $request->validate([
+            'collection_slot_id' => ['required', 'exists:collection_slots,id'],
+        ]);
+
+        $slot = CollectionSlot::findOrFail($validated['collection_slot_id']);
+
+        // Check if the slot is available
+        if (!$slot->isAvailable()) {
+            return back()->withErrors(['slot_assignment' => 'Selected collection slot is not available']);
+        }
+
+        // Assign the slot to the order and increment booked count
+        $order->update([
+            'collection_slot_id' => $slot->id,
+        ]);
+
+        $slot->increment('booked_count');
+
+        // Reload the order with collection slot data
+        $order->load('collectionSlot');
+
+        return back()->with('success', 'Collection slot assigned successfully');
+    }
+
+    /**
+     * Poll payment status for pending payments.
+     */
+    private function pollPaymentStatus(Request $request, Order $order)
+    {
+        // Only admin and kitchen staff can poll payment status (since it updates order status)
+        // if (!$request->user()->isAdmin() && !$request->user()->isKitchen()) {
+        //     return;
+        // }
+
+        // Get pending payments for this order
+        $pendingPayments = Payment::where('order_id', $order->id)
+            ->where('status', 'pending')
+            ->whereNotNull('poll_url')
+            ->get();
+
+        foreach ($pendingPayments as $payment) {
+         
+            try {
+                // Initialize PayNow for status checking
+                $paynow = new Paynow(
+                    env('PAYNOW_INTEGRATION_ID'),
+                    env('PAYNOW_INTEGRATION_KEY'),
+                     route('orders.show', ['order' => $order->id, 'poll' => 'true']), // return url
+                    route('payments.callback') // result url
+                );
+
+                // Check payment status using poll URL
+                $statusResponse = $paynow->pollTransaction($payment->poll_url);
+
+               
+                if (method_exists($statusResponse, 'paid') ? $statusResponse->paid() : $statusResponse->isPaid()) {
+                    $newStatus = method_exists($statusResponse, 'getStatus') ? $statusResponse->getStatus() : 'paid';
+
+                    // Update payment status
+                    $payment->update([
+                        'status' => $newStatus,
+                        'paynow_response' => json_encode($statusResponse),
+                    ]);
+                    $order->update([
+                            'status' => 'ready',
+                            'paid_at' => now(),
+                        ]);
+                        
+                    // Update order status if payment is completed
+                    if ($newStatus === 'paid' && $order->status !== 'paid') {
+                        
+
+                        Log::info("Order #{$order->id} marked as paid via polling", [
+                            'payment_id' => $payment->id,
+                            'amount' => $payment->amount,
+                        ]);
+                    } elseif ($newStatus === 'cancelled' && in_array($order->status, ['pending', 'confirmed'])) {
+                        $order->update(['status' => 'cancelled']);
+
+                        Log::info("Order #{$order->id} cancelled via polling", [
+                            'payment_id' => $payment->id,
+                        ]);
+                    }
+                }
+
+            } catch (\Exception $e) {
+                Log::error("Payment polling failed for order #{$order->id}", [
+                    'payment_id' => $payment->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 }

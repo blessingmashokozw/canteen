@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type Meal } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 import {
     Table,
     TableBody,
@@ -29,8 +30,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import InputError from '@/components/input-error';
-import { useState } from 'react';
-import { PencilIcon, PlusIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import {
+    AlertTriangleIcon,
+    PackageIcon,
+    PencilIcon,
+    PlusIcon,
+    TrendingUpIcon,
+} from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -121,6 +128,87 @@ function AddMealModal() {
     );
 }
 
+function UpdateStockModal({ meal }: { meal: Meal }) {
+    const [open, setOpen] = useState(false);
+    const { data, setData, patch, processing, errors, reset } = useForm({
+        stock_quantity: meal.stock_quantity?.toString() || '0',
+        low_stock_threshold: meal.low_stock_threshold?.toString() || '5',
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        patch(`/meals/${meal.id}/stock`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setOpen(false);
+                reset();
+            },
+        });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm" title="Manage Stock">
+                    <PackageIcon className="size-4 mr-1" />
+                    Stock
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Manage Stock</DialogTitle>
+                    <DialogDescription>
+                        Update stock levels for {meal.name}
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit}>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="stock-quantity">Current Stock</Label>
+                            <Input
+                                id="stock-quantity"
+                                type="number"
+                                min="0"
+                                value={data.stock_quantity}
+                                onChange={(e) => setData('stock_quantity', e.target.value)}
+                                placeholder="0"
+                            />
+                            <InputError message={errors.stock_quantity} />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="low-stock-threshold">Low Stock Alert Threshold</Label>
+                            <Input
+                                id="low-stock-threshold"
+                                type="number"
+                                min="0"
+                                value={data.low_stock_threshold}
+                                onChange={(e) => setData('low_stock_threshold', e.target.value)}
+                                placeholder="5"
+                            />
+                            <InputError message={errors.low_stock_threshold} />
+                            <p className="text-xs text-muted-foreground">
+                                Alert when stock falls to or below this level
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => setOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={processing}>
+                            {processing ? 'Updating...' : 'Update Stock'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function UpdatePriceModal({ meal }: { meal: Meal }) {
     const [open, setOpen] = useState(false);
     const { data, setData, patch, processing, errors, reset } = useForm({
@@ -141,8 +229,9 @@ function UpdatePriceModal({ meal }: { meal: Meal }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" className='cursor' size="sm" title='Edit Meal Price'>
-                   <PencilIcon className="size-4" /> Edit Price 
+                <Button variant="outline" size="sm" title="Edit Meal Price">
+                    <PencilIcon className="size-4 mr-1" />
+                    Price
                 </Button>
             </DialogTrigger>
             <DialogContent>
@@ -186,6 +275,76 @@ function UpdatePriceModal({ meal }: { meal: Meal }) {
     );
 }
 
+function AddStockModal({ meal }: { meal: Meal }) {
+    const [open, setOpen] = useState(false);
+    const { data, setData, post, processing, errors, reset } = useForm({
+        quantity: '',
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post(`/meals/${meal.id}/add-stock`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setOpen(false);
+                reset();
+            },
+        });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button size="sm" title="Add Stock">
+                    <TrendingUpIcon className="size-4 mr-1" />
+                    Restock
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add Stock</DialogTitle>
+                    <DialogDescription>
+                        Add more stock to {meal.name}
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit}>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="quantity">Quantity to Add</Label>
+                            <Input
+                                id="quantity"
+                                type="number"
+                                min="1"
+                                value={data.quantity}
+                                onChange={(e) => setData('quantity', e.target.value)}
+                                placeholder="Enter quantity"
+                            />
+                            <InputError message={errors.quantity} />
+                        </div>
+                        <div className="p-3 bg-muted rounded-lg">
+                            <p className="text-sm text-muted-foreground">
+                                Current stock: {meal.stock_quantity || 0} units
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => setOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={processing}>
+                            {processing ? 'Adding...' : 'Add Stock'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function MealsIndex({ meals }: MealsIndexProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -209,13 +368,15 @@ export default function MealsIndex({ meals }: MealsIndexProps) {
                                 <TableRow>
                                     <TableHead>Name</TableHead>
                                     <TableHead className="text-right">Price ($)</TableHead>
+                                    <TableHead className="text-center">Stock Status</TableHead>
+                                    <TableHead className="text-right">Stock Level</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {meals.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                        <TableCell colSpan={5} className="text-center text-muted-foreground">
                                             No meals available
                                         </TableCell>
                                     </TableRow>
@@ -226,8 +387,28 @@ export default function MealsIndex({ meals }: MealsIndexProps) {
                                             <TableCell className="text-right font-bold">
                                                 ${meal.price.toFixed(2)}
                                             </TableCell>
+                                            <TableCell className="text-center">
+                                                <Badge
+                                                    variant={
+                                                        (meal.stock_quantity || 0) <= 0 ? 'destructive' :
+                                                        (meal.stock_quantity || 0) <= (meal.low_stock_threshold || 5) ? 'default' :
+                                                        'secondary'
+                                                    }
+                                                >
+                                                    {(meal.stock_quantity || 0) <= 0 ? 'Out of Stock' :
+                                                     (meal.stock_quantity || 0) <= (meal.low_stock_threshold || 5) ? 'Low Stock' :
+                                                     'In Stock'}
+                                                </Badge>
+                                            </TableCell>
                                             <TableCell className="text-right">
-                                                <UpdatePriceModal meal={meal} />
+                                                {meal.stock_quantity || 0} units
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex gap-2 justify-end">
+                                                    <UpdatePriceModal meal={meal} />
+                                                    <UpdateStockModal meal={meal} />
+                                                    <AddStockModal meal={meal} />
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))

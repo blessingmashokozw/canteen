@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -22,6 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -45,5 +47,71 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Check if user is an admin.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user is a customer.
+     */
+    public function isCustomer(): bool
+    {
+        return $this->role === 'customer';
+    }
+
+    /**
+     * Check if user is kitchen staff.
+     */
+    public function isKitchen(): bool
+    {
+        return $this->role === 'kitchen';
+    }
+
+    /**
+     * Get role badge color for UI.
+     */
+    public function getRoleBadgeVariant(): string
+    {
+        return match($this->role) {
+            'admin' => 'destructive',
+            'kitchen' => 'default',
+            'customer' => 'secondary',
+            default => 'outline'
+        };
+    }
+
+    /**
+     * Get role display name.
+     */
+    public function getRoleDisplayName(): string
+    {
+        return match($this->role) {
+            'admin' => 'Administrator',
+            'kitchen' => 'Kitchen Staff',
+            'customer' => 'Customer',
+            default => ucfirst($this->role)
+        };
+    }
+
+    /**
+     * Get the orders for the user.
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    /**
+     * Get the number of orders for the user.
+     */
+    public function getOrdersCountAttribute(): int
+    {
+        return $this->orders()->count();
     }
 }

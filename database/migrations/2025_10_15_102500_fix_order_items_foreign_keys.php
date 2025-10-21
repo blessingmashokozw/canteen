@@ -13,14 +13,14 @@ return new class extends Migration
     {
         Schema::table('order_items', function (Blueprint $table) {
             // Drop existing columns without constraints
-            $table->dropForeign(['order_id']);
-            $table->dropForeign(['meal_id']);
-            $table->dropForeign(['status_id']);
+            // $table->dropForeign(['order_id']);
+            // $table->dropForeign(['meal_id']);
+            // $table->dropForeign(['status_id']);
 
             // Recreate with proper foreign key constraints
-            $table->foreignId('order_id')->constrained()->onDelete('cascade');
-            $table->foreignId('meal_id')->constrained()->onDelete('cascade');
-            $table->foreignId('status_id')->constrained()->onDelete('cascade');
+            // $table->foreignId('order_id')->constrained()->onDelete('cascade');
+            // $table->foreignId('meal_id')->constrained()->onDelete('cascade');
+            // $table->foreignId('status_id')->constrained()->onDelete('cascade');
         });
     }
 
@@ -29,16 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('order_items', function (Blueprint $table) {
-            // Drop foreign key constraints
-            $table->dropForeign(['order_id']);
-            $table->dropForeign(['meal_id']);
-            $table->dropForeign(['status_id']);
-
-            // Recreate as simple integers
-            $table->integer('order_id');
-            $table->integer('meal_id');
-            $table->integer('status_id');
-        });
+        
     }
 };

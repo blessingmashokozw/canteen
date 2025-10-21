@@ -13,7 +13,7 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid,ForkKnifeCrossed, ShoppingBasket,Banknote, BanknoteIcon } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid,ForkKnifeCrossed, ShoppingBasket, CreditCard, Calendar, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -33,9 +33,19 @@ const mainNavItems: NavItem[] = [
         icon: ShoppingBasket,
     },
     {
+        title: 'Collection Slots',
+        href: "/collection-slots",
+        icon: Calendar,
+    },
+    {
+        title: 'Users',
+        href: "/users",
+        icon: Users,
+    },
+    {
         title: 'Payments',
         href: "/payments",
-        icon: BanknoteIcon,
+        icon: CreditCard,
     },
 ];
 
@@ -53,6 +63,13 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    // Filter navigation items based on user role
+    const getFilteredNavItems = () => {
+        // For now, we'll handle role-based filtering in the NavMain component
+        // This allows for more dynamic filtering based on authentication state
+        return mainNavItems;
+    };
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -68,7 +85,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={getFilteredNavItems()} />
             </SidebarContent>
 
             <SidebarFooter>

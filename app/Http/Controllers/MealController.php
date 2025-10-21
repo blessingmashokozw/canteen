@@ -52,4 +52,53 @@ class MealController extends Controller
 
         return back()->with('success', 'Meal price updated successfully');
     }
+
+    /**
+     * Update the meal stock quantity.
+     */
+    public function updateStock(Request $request, Meal $meal): RedirectResponse
+    {
+        $validated = $request->validate([
+            'stock_quantity' => ['required', 'integer', 'min:0'],
+            'low_stock_threshold' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $meal->update([
+            'stock_quantity' => $validated['stock_quantity'],
+            'low_stock_threshold' => $validated['low_stock_threshold'],
+        ]);
+
+        $status = $meal->fresh()->getStockStatus();
+        return back()->with('success', "Meal stock updated successfully. Current status: {$status}");
+    }
+
+    /**
+     * Add stock to a meal (restock).
+     */
+    public function addStock(Request $request, Meal $meal): RedirectResponse
+    {
+        $validated = $request->validate([
+            'quantity' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $meal->addStock($validated['quantity']);
+
+        $status = $meal->fresh()->getStockStatus();
+        return back()->with('success', "Added {$validated['quantity']} units to stock. Current status: {$status}");
+    }
+
+    /**
+     * Get meals that are low on stock.
+     */
+    public function lowStockMeals(): Response
+    {
+        $lowStockMeals = Meal::whereRaw('stock_quantity <= low_stock_threshold')
+            ->where('stock_quantity', '>', 0)
+            ->orderByRaw('stock_quantity / low_stock_threshold ASC')
+            ->get();
+
+        return Inertia::render('meals/low-stock', [
+            'lowStockMeals' => $lowStockMeals,
+        ]);
+    }
 }

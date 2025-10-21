@@ -35,10 +35,12 @@ export interface User {
     name: string;
     email: string;
     avatar?: string;
+    role: 'admin' | 'customer' | 'kitchen';
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
     created_at: string;
     updated_at: string;
+    orders_count?: number;
     [key: string]: unknown; // This allows for additional properties...
 }
 
@@ -46,6 +48,8 @@ export interface Meal {
     id: number;
     name: string;
     price: number;
+    stock_quantity?: number;
+    low_stock_threshold?: number;
     created_at: string;
     updated_at: string;
 }
@@ -63,14 +67,32 @@ export interface OrderItem {
     updated_at: string;
 }
 
+export interface Payment {
+    id: number;
+    order_id: number;
+    payment_method: string;
+    amount: number;
+    status: 'pending' | 'paid' | 'failed' | 'cancelled';
+    payment_url?: string;
+    poll_url?: string;
+    hash?: string;
+    paid_at?: string;
+    paynow_response?: string;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface Order {
     id: number;
     user_id: number;
     instructions: string | null;
     payment_method: 'CASH' | 'ONLINE_PAYMENT';
     status?: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed';
+    collection_slot_id?: number | null;
+    collection_slot?: CollectionSlot | null;
     user?: User;
     order_items?: OrderItem[];
+    payments?: Payment[];
     total?: number;
     available_total?: number;
     created_at: string;
