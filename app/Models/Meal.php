@@ -20,11 +20,34 @@ class Meal extends Model
     ];
 
     /**
-     * Check if meal is in stock.
+     * Get ingredients for this meal.
+     */
+    public function ingredients()
+    {
+        return $this->belongsToMany(Ingredient::class, 'meal_ingredients')
+                    ->withPivot('quantity_required')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Check if meal is in stock (considering both meal stock and ingredient availability).
      */
     public function isInStock(): bool
     {
-        return $this->stock_quantity > 0;
+        // First check if meal has stock
+        if ($this->stock_quantity <= 0) {
+            return false;
+        }
+
+        // Then check if all required ingredients are available
+        foreach ($this->ingredients as $ingredient) {
+            $requiredQuantity = $ingredient->pivot->quantity_required;
+            if ($ingredient->stock_quantity < $requiredQuantity) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -45,11 +68,20 @@ class Meal extends Model
 
     /**
      * Reduce stock quantity when an order is placed.
+     * Also reduces ingredient stock.
      */
     public function reduceStock(int $quantity): bool
     {
         if ($this->stock_quantity >= $quantity) {
+            // Reduce meal stock
             $this->decrement('stock_quantity', $quantity);
+
+            // Reduce ingredient stock for each ingredient used
+            foreach ($this->ingredients as $ingredient) {
+                $requiredQuantity = $ingredient->pivot->quantity_required * $quantity;
+                $ingredient->reduceStock($requiredQuantity);
+            }
+
             return true;
         }
         return false;
@@ -89,5 +121,15 @@ class Meal extends Model
         } else {
             return 'secondary';
         }
+    }
+
+    /**
+     * Get ingredients that are low on stock for this meal.
+     */
+    public function getLowStockIngredients()
+    {
+        return $this->ingredients()->wherePivot('quantity_required', '>', 0)
+                    ->whereRaw('stock_quantity <= low_stock_threshold')
+                    ->get();
     }
 }

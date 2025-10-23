@@ -50,296 +50,246 @@ interface MealsIndexProps {
     meals: Meal[];
 }
 
+// Create Meal Modal Component
 function AddMealModal() {
-    const [open, setOpen] = useState(false);
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const [showModal, setShowModal] = useState(false);
+    const form = useForm({
         name: '',
         price: '',
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        post('/meals', {
-            preserveScroll: true,
+    const handleSubmit = () => {
+        form.post('/meals', {
             onSuccess: () => {
-                setOpen(false);
-                reset();
+                setShowModal(false);
+                form.reset();
             },
         });
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={showModal} onOpenChange={setShowModal}>
             <DialogTrigger asChild>
                 <Button>
-                    <PlusIcon className="size-4 mr-2" />
-                    Add New Meal
+                    <PlusIcon className="mr-2 h-4 w-4" />
+                    Add Meal
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Add New Meal</DialogTitle>
                     <DialogDescription>
-                        Create a new meal item
+                        Create a new meal with name and price.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Meal Name</Label>
-                            <Input
-                                id="name"
-                                type="text"
-                                value={data.name}
-                                onChange={(e) => setData('name', e.target.value)}
-                                placeholder="Enter meal name"
-                            />
-                            <InputError message={errors.name} />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="new-price">Price ($)</Label>
-                            <Input
-                                id="new-price"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={data.price}
-                                onChange={(e) => setData('price', e.target.value)}
-                                placeholder="0.00"
-                            />
-                            <InputError message={errors.price} />
-                        </div>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">Meal Name</Label>
+                        <Input
+                            id="name"
+                            value={form.data.name}
+                            onChange={(e) => form.setData('name', e.target.value)}
+                            placeholder="Enter meal name"
+                        />
+                        <InputError message={form.errors.name} />
                     </div>
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => setOpen(false)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="submit" disabled={processing}>
-                            {processing ? 'Creating...' : 'Create Meal'}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                    <div className="grid gap-2">
+                        <Label htmlFor="price">Price ($)</Label>
+                        <Input
+                            id="price"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={form.data.price}
+                            onChange={(e) => form.setData('price', e.target.value)}
+                            placeholder="0.00"
+                        />
+                        <InputError message={form.errors.price} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowModal(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleSubmit} disabled={form.processing}>
+                        Create Meal
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
 }
 
-function UpdateStockModal({ meal }: { meal: Meal }) {
-    const [open, setOpen] = useState(false);
-    const { data, setData, patch, processing, errors, reset } = useForm({
-        stock_quantity: meal.stock_quantity?.toString() || '0',
-        low_stock_threshold: meal.low_stock_threshold?.toString() || '5',
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        patch(`/meals/${meal.id}/stock`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setOpen(false);
-                reset();
-            },
-        });
-    };
-
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button variant="outline" size="sm" title="Manage Stock">
-                    <PackageIcon className="size-4 mr-1" />
-                    Stock
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Manage Stock</DialogTitle>
-                    <DialogDescription>
-                        Update stock levels for {meal.name}
-                    </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="stock-quantity">Current Stock</Label>
-                            <Input
-                                id="stock-quantity"
-                                type="number"
-                                min="0"
-                                value={data.stock_quantity}
-                                onChange={(e) => setData('stock_quantity', e.target.value)}
-                                placeholder="0"
-                            />
-                            <InputError message={errors.stock_quantity} />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="low-stock-threshold">Low Stock Alert Threshold</Label>
-                            <Input
-                                id="low-stock-threshold"
-                                type="number"
-                                min="0"
-                                value={data.low_stock_threshold}
-                                onChange={(e) => setData('low_stock_threshold', e.target.value)}
-                                placeholder="5"
-                            />
-                            <InputError message={errors.low_stock_threshold} />
-                            <p className="text-xs text-muted-foreground">
-                                Alert when stock falls to or below this level
-                            </p>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => setOpen(false)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="submit" disabled={processing}>
-                            {processing ? 'Updating...' : 'Update Stock'}
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
+// Update Price Modal Component
 function UpdatePriceModal({ meal }: { meal: Meal }) {
-    const [open, setOpen] = useState(false);
-    const { data, setData, patch, processing, errors, reset } = useForm({
+    const [showModal, setShowModal] = useState(false);
+    const form = useForm({
         price: meal.price.toString(),
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        patch(`/meals/${meal.id}/price`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setOpen(false);
-                reset();
-            },
+    const handleSubmit = () => {
+        form.patch(`/meals/${meal.id}/price`, {
+            onSuccess: () => setShowModal(false),
         });
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={showModal} onOpenChange={setShowModal}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" title="Edit Meal Price">
-                    <PencilIcon className="size-4 mr-1" />
-                    Price
+                <Button variant="outline" size="sm">
+                    <PencilIcon className="h-4 w-4" />
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Update Price</DialogTitle>
                     <DialogDescription>
-                        Update the price for {meal.name}
+                        Update the price for {meal.name}.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="price">Price ($)</Label>
-                            <Input
-                                id="price"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={data.price}
-                                onChange={(e) => setData('price', e.target.value)}
-                                placeholder="0.00"
-                            />
-                            <InputError message={errors.price} />
-                        </div>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="price">New Price ($)</Label>
+                        <Input
+                            id="price"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={form.data.price}
+                            onChange={(e) => form.setData('price', e.target.value)}
+                        />
+                        <InputError message={form.errors.price} />
                     </div>
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => setOpen(false)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="submit" disabled={processing}>
-                            {processing ? 'Updating...' : 'Update Price'}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowModal(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleSubmit} disabled={form.processing}>
+                        Update Price
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
 }
 
-function AddStockModal({ meal }: { meal: Meal }) {
-    const [open, setOpen] = useState(false);
-    const { data, setData, post, processing, errors, reset } = useForm({
-        quantity: '',
+// Update Stock Modal Component
+function UpdateStockModal({ meal }: { meal: Meal }) {
+    const [showModal, setShowModal] = useState(false);
+    const form = useForm({
+        stock_quantity: (meal.stock_quantity || 0).toString(),
+        low_stock_threshold: (meal.low_stock_threshold || 5).toString(),
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        post(`/meals/${meal.id}/add-stock`, {
-            preserveScroll: true,
+    const handleSubmit = () => {
+        form.patch(`/meals/${meal.id}/stock`, {
+            onSuccess: () => setShowModal(false),
+        });
+    };
+
+    return (
+        <Dialog open={showModal} onOpenChange={setShowModal}>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                    <PackageIcon className="h-4 w-4" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Update Stock</DialogTitle>
+                    <DialogDescription>
+                        Update stock levels for {meal.name}.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="stock_quantity">Stock Quantity</Label>
+                        <Input
+                            id="stock_quantity"
+                            type="number"
+                            min="0"
+                            value={form.data.stock_quantity}
+                            onChange={(e) => form.setData('stock_quantity', e.target.value)}
+                        />
+                        <InputError message={form.errors.stock_quantity} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="low_stock_threshold">Low Stock Threshold</Label>
+                        <Input
+                            id="low_stock_threshold"
+                            type="number"
+                            min="0"
+                            value={form.data.low_stock_threshold}
+                            onChange={(e) => form.setData('low_stock_threshold', e.target.value)}
+                        />
+                        <InputError message={form.errors.low_stock_threshold} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowModal(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleSubmit} disabled={form.processing}>
+                        Update Stock
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+// Add Stock Modal Component
+function AddStockModal({ meal }: { meal: Meal }) {
+    const [showModal, setShowModal] = useState(false);
+    const form = useForm({
+        quantity: '1',
+    });
+
+    const handleSubmit = () => {
+        form.post(`/meals/${meal.id}/add-stock`, {
             onSuccess: () => {
-                setOpen(false);
-                reset();
+                setShowModal(false);
+                form.reset();
             },
         });
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={showModal} onOpenChange={setShowModal}>
             <DialogTrigger asChild>
-                <Button size="sm" title="Add Stock">
-                    <TrendingUpIcon className="size-4 mr-1" />
-                    Restock
+                <Button variant="outline" size="sm">
+                    <TrendingUpIcon className="h-4 w-4" />
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Add Stock</DialogTitle>
                     <DialogDescription>
-                        Add more stock to {meal.name}
+                        Add stock to {meal.name}.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="quantity">Quantity to Add</Label>
-                            <Input
-                                id="quantity"
-                                type="number"
-                                min="1"
-                                value={data.quantity}
-                                onChange={(e) => setData('quantity', e.target.value)}
-                                placeholder="Enter quantity"
-                            />
-                            <InputError message={errors.quantity} />
-                        </div>
-                        <div className="p-3 bg-muted rounded-lg">
-                            <p className="text-sm text-muted-foreground">
-                                Current stock: {meal.stock_quantity || 0} units
-                            </p>
-                        </div>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="quantity">Quantity to Add</Label>
+                        <Input
+                            id="quantity"
+                            type="number"
+                            min="1"
+                            value={form.data.quantity}
+                            onChange={(e) => form.setData('quantity', e.target.value)}
+                        />
+                        <InputError message={form.errors.quantity} />
                     </div>
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => setOpen(false)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="submit" disabled={processing}>
-                            {processing ? 'Adding...' : 'Add Stock'}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowModal(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleSubmit} disabled={form.processing}>
+                        Add Stock
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
@@ -405,6 +355,14 @@ export default function MealsIndex({ meals }: MealsIndexProps) {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex gap-2 justify-end">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => router.visit(`/meals/${meal.id}/ingredients`)}
+                                                    >
+                                                        <PackageIcon className="h-4 w-4 mr-1" />
+                                                        Ingredients
+                                                    </Button>
                                                     <UpdatePriceModal meal={meal} />
                                                     <UpdateStockModal meal={meal} />
                                                     <AddStockModal meal={meal} />

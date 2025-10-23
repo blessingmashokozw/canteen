@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import {
     Card,
     CardContent,
@@ -43,8 +44,129 @@ import {
     SearchIcon,
     MoreHorizontalIcon,
     EyeIcon,
+    PlusIcon,
 } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import InputError from '@/components/input-error';
 import { format } from 'date-fns';
+
+// Add User Modal Component
+function AddUserModal() {
+    const [showModal, setShowModal] = useState(false);
+    const form = useForm({
+        name: '',
+        email: '',
+        password: '',
+        password_confirmation: '',
+        role: 'customer',
+    });
+
+    const handleSubmit = () => {
+        form.post('/users', {
+            onSuccess: () => {
+                setShowModal(false);
+                form.reset();
+            },
+        });
+    };
+
+    return (
+        <Dialog open={showModal} onOpenChange={setShowModal}>
+            <DialogTrigger asChild>
+                <Button>
+                    <PlusIcon className="mr-2 h-4 w-4" />
+                    Add User
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add New User</DialogTitle>
+                    <DialogDescription>
+                        Create a new user account with specified role and permissions.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">Full Name</Label>
+                        <Input
+                            id="name"
+                            value={form.data.name}
+                            onChange={(e) => form.setData('name', e.target.value)}
+                            placeholder="Enter full name"
+                        />
+                        <InputError message={form.errors.name} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input
+                            id="email"
+                            type="email"
+                            value={form.data.email}
+                            onChange={(e) => form.setData('email', e.target.value)}
+                            placeholder="Enter email address"
+                        />
+                        <InputError message={form.errors.email} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="role">Role</Label>
+                        <Select
+                            value={form.data.role}
+                            onValueChange={(value) => form.setData('role', value)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="admin">Administrator</SelectItem>
+                                <SelectItem value="kitchen">Kitchen Staff</SelectItem>
+                                <SelectItem value="customer">Customer</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <InputError message={form.errors.role} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            value={form.data.password}
+                            onChange={(e) => form.setData('password', e.target.value)}
+                            placeholder="Enter password"
+                        />
+                        <InputError message={form.errors.password} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="password_confirmation">Confirm Password</Label>
+                        <Input
+                            id="password_confirmation"
+                            type="password"
+                            value={form.data.password_confirmation}
+                            onChange={(e) => form.setData('password_confirmation', e.target.value)}
+                            placeholder="Confirm password"
+                        />
+                        <InputError message={form.errors.password_confirmation} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowModal(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleSubmit} disabled={form.processing}>
+                        Create User
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -58,6 +180,7 @@ interface User {
     name: string;
     email: string;
     email_verified_at: string | null;
+    role: string;
     created_at: string;
     orders_count?: number;
 }
@@ -129,6 +252,7 @@ export default function UsersIndex({ users, stats, filters }: UsersIndexProps) {
                                 Manage system users and their accounts
                             </p>
                         </div>
+                        <AddUserModal />
                     </div>
 
                     {/* Stats Cards */}

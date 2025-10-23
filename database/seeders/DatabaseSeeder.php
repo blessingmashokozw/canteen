@@ -26,8 +26,10 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call([
-            MealsSeeder::class,
-            StatusSeeder::class,
+            // IngredientSeeder::class,
+            // MealsSeeder::class,
+            // StatusSeeder::class,
+            CollectionSlotSeeder::class
         ]);
     }
 }

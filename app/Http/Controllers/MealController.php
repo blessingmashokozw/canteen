@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Ingredient;
 use App\Models\Meal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -100,5 +101,69 @@ class MealController extends Controller
         return Inertia::render('meals/low-stock', [
             'lowStockMeals' => $lowStockMeals,
         ]);
+    }
+
+    /**
+     * Show ingredients for a specific meal.
+     */
+    public function showIngredients(Meal $meal): Response
+    {
+        $meal->load('ingredients');
+        $allIngredients = Ingredient::orderBy('name')->get();
+
+        return Inertia::render('meals/ingredients', [
+            'meal' => $meal,
+            'allIngredients' => $allIngredients,
+        ]);
+    }
+
+    /**
+     * Add an ingredient to a meal.
+     */
+    public function addIngredient(Request $request, Meal $meal): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ingredient_id' => ['required', 'exists:ingredients,id'],
+            'quantity_required' => ['required', 'numeric', 'min:0.01'],
+        ]);
+
+        // Check if ingredient is already assigned to this meal
+        $existing = $meal->ingredients()->where('ingredient_id', $validated['ingredient_id'])->first();
+
+        if ($existing) {
+            return back()->with('error', 'This ingredient is already assigned to this meal');
+        }
+
+        $meal->ingredients()->attach($validated['ingredient_id'], [
+            'quantity_required' => $validated['quantity_required']
+        ]);
+
+        return back()->with('success', 'Ingredient added to meal successfully');
+    }
+
+    /**
+     * Update ingredient quantity for a meal.
+     */
+    public function updateIngredient(Request $request, Meal $meal, Ingredient $ingredient): RedirectResponse
+    {
+        $validated = $request->validate([
+            'quantity_required' => ['required', 'numeric', 'min:0.01'],
+        ]);
+
+        $meal->ingredients()->updateExistingPivot($ingredient->id, [
+            'quantity_required' => $validated['quantity_required']
+        ]);
+
+        return back()->with('success', 'Ingredient quantity updated successfully');
+    }
+
+    /**
+     * Remove an ingredient from a meal.
+     */
+    public function removeIngredient(Meal $meal, Ingredient $ingredient): RedirectResponse
+    {
+        $meal->ingredients()->detach($ingredient->id);
+
+        return back()->with('success', 'Ingredient removed from meal successfully');
     }
 }

@@ -56,7 +56,7 @@ class PaymentController extends Controller
         // Get summary statistics
         $stats = [
             'total_payments' => Payment::count(),
-            'total_amount' => (float) Payment::sum('amount'),
+            'total_amount' => (float) Payment::where('status', 'paid')->sum('amount'),
             'paid_payments' => Payment::where('status', 'paid')->count(),
             'pending_payments' => Payment::where('status', 'pending')->count(),
             'failed_payments' => Payment::where('status', 'failed')->count(),
@@ -81,7 +81,6 @@ class PaymentController extends Controller
         if ($order->status !== 'confirmed') {
             abort(403, 'Payment can only be initiated for confirmed orders.');
         }
-
         // Only allow payment for the order owner
         if ($order->user_id !== auth()->id()) {
             abort(403, 'You can only pay for your own orders.');
@@ -105,10 +104,13 @@ class PaymentController extends Controller
 
                 // Add items to payment
                 foreach ($order->orderItems as $item) {
+                    //dd($item);
                     if ($item->is_available) {
-                        $payment->add($item->meal->name, $item->price, $item->quantity, $item->meal->name);
+                        $payment->add($item->meal->name, $item->price* $item->quantity, $item->quantity, $item->meal->name);
                     }
                 }
+
+              //  dd($payment);
 
                 // Send payment to PayNow
                 $response = $paynow->send($payment);

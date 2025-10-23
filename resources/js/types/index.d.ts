@@ -44,6 +44,18 @@ export interface User {
     [key: string]: unknown; // This allows for additional properties...
 }
 
+export interface Ingredient {
+    id: number;
+    name: string;
+    unit: string;
+    stock_quantity: number;
+    low_stock_threshold: number;
+    created_at: string;
+    updated_at: string;
+    getStockStatus?: () => string;
+    getStockBadgeVariant?: () => string;
+}
+
 export interface Meal {
     id: number;
     name: string;
@@ -52,6 +64,9 @@ export interface Meal {
     low_stock_threshold?: number;
     created_at: string;
     updated_at: string;
+    getStockStatus?: () => string;
+    getStockBadgeVariant?: () => string;
+    getLowStockIngredients?: () => any[];
 }
 
 export interface OrderItem {
@@ -95,6 +110,24 @@ export interface Order {
     payments?: Payment[];
     total?: number;
     available_total?: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CollectionSlot {
+    id: number;
+    name: string;
+    start_time: string;
+    end_time: string;
+    max_orders: number;
+    current_orders?: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface Status {
+    id: number;
+    status: string;
     created_at: string;
     updated_at: string;
 }

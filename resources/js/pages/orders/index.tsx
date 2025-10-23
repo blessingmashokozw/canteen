@@ -67,6 +67,7 @@ interface OrdersIndexProps {
     };
     filters: {
         search?: string;
+        order_id?: string;
         date_from?: string;
         date_to?: string;
         payment_method?: string;
@@ -76,6 +77,7 @@ interface OrdersIndexProps {
 
 export default function OrdersIndex({ orders, stats, filters: initialFilters }: OrdersIndexProps) {
     const [search, setSearch] = useState(initialFilters.search || '');
+    const [orderId, setOrderId] = useState(initialFilters.order_id || '');
     const [dateFrom, setDateFrom] = useState(initialFilters.date_from || '');
     const [dateTo, setDateTo] = useState(initialFilters.date_to || '');
     const [paymentMethod, setPaymentMethod] = useState(initialFilters.payment_method || '');
@@ -84,6 +86,7 @@ export default function OrdersIndex({ orders, stats, filters: initialFilters }: 
 
     useEffect(() => {
         setSearch(initialFilters.search || '');
+        setOrderId(initialFilters.order_id || '');
         setDateFrom(initialFilters.date_from || '');
         setDateTo(initialFilters.date_to || '');
         setPaymentMethod(initialFilters.payment_method || '');
@@ -93,6 +96,7 @@ export default function OrdersIndex({ orders, stats, filters: initialFilters }: 
     const handleFilter = () => {
         router.get('/orders', {
             search,
+            order_id: orderId,
             date_from: dateFrom,
             date_to: dateTo,
             payment_method: paymentMethod,
@@ -105,6 +109,7 @@ export default function OrdersIndex({ orders, stats, filters: initialFilters }: 
 
     const handleClearFilters = () => {
         setSearch('');
+        setOrderId('');
         setDateFrom('');
         setDateTo('');
         setPaymentMethod('');
@@ -115,7 +120,7 @@ export default function OrdersIndex({ orders, stats, filters: initialFilters }: 
         });
     };
 
-    const hasActiveFilters = search || dateFrom || dateTo || paymentMethod || status;
+    const hasActiveFilters = search || orderId || dateFrom || dateTo || paymentMethod || status;
 
     const calculateTotal = (order: Order) => {
         return order.order_items?.reduce((sum, item) => {
@@ -274,6 +279,19 @@ export default function OrdersIndex({ orders, stats, filters: initialFilters }: 
                             {showFilters && (
                                 <div className="grid gap-4 p-4 border rounded-lg bg-muted/50">
                                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                        {/* Order ID */}
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="order_id">Order ID</Label>
+                                            <Input
+                                                id="order_id"
+                                                placeholder="Enter order ID..."
+                                                type="number"
+                                                min="1"
+                                                value={orderId}
+                                                onChange={(e) => setOrderId(e.target.value)}
+                                            />
+                                        </div>
+
                                         {/* Search */}
                                         <div className="grid gap-2">
                                             <Label htmlFor="search">Search</Label>

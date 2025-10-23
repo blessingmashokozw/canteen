@@ -5,7 +5,9 @@ use App\Http\Controllers\MealController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\IngredientController;
 use Inertia\Inertia;
+use App\Models\Meal;
 
 Route::get('/', function () {
     $user = auth()->user();
@@ -85,30 +87,34 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return app(MealController::class)->addStock($request, $meal);
     })->name('meals.addStock');
 
-    Route::get('/meals/low-stock', function () {
-        $user = auth()->user();
+    
+    Route::get('/ingredients', [IngredientController::class, 'index'])->name('ingredients.index');
+    Route::post('/ingredients', [IngredientController::class, 'store'])->name('ingredients.store');
+    Route::patch('/ingredients/{ingredient}/stock', [IngredientController::class, 'updateStock'])->name('ingredients.updateStock');
+    Route::post('/ingredients/{ingredient}/add-stock', [IngredientController::class, 'addStock'])->name('ingredients.addStock');
+    Route::get('/ingredients/low-stock', [IngredientController::class, 'lowStock'])->name('ingredients.lowStock');
+    Route::get('/meals/low-stock', [MealController::class, 'lowStockMeals'])->name('meals.lowStock');
 
-        // Only admins and kitchen staff can view low stock alerts
-        if (!$user || !in_array($user->role, ['admin', 'kitchen'])) {
-            abort(403, 'Access denied. Low stock alerts are restricted to administrators and kitchen staff.');
-        }
-
-        return app(MealController::class)->lowStockMeals();
-    })->name('meals.lowStock');
+    // Meal ingredients routes
+    Route::get('/meals/{meal}/ingredients', [MealController::class, 'showIngredients'])->name('meals.ingredients');
+    Route::post('/meals/{meal}/ingredients', [MealController::class, 'addIngredient'])->name('meals.ingredients.store');
+    Route::patch('/meals/{meal}/ingredients/{ingredient}', [MealController::class, 'updateIngredient'])->name('meals.ingredients.update');
+    Route::delete('/meals/{meal}/ingredients/{ingredient}', [MealController::class, 'removeIngredient'])->name('meals.ingredients.destroy');
 
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('/orders/{order}/confirm', [OrderController::class, 'confirm'])->name('orders.confirm');
-    Route::post('/orders/{order}/mark-completed', [OrderController::class, 'markAsCompleted'])->name('orders.mark-completed');
     Route::post('/orders/{order}/assign-slot', [OrderController::class, 'assignSlot'])->name('orders.assign-slot');
     Route::post('/orders/{order}/mark-delivered', [OrderController::class, 'markDelivered'])->name('orders.mark-delivered');
+    Route::post('/orders/{order}/mark-completed', [OrderController::class, 'markAsCompleted'])->name('orders.mark-completed');
     Route::get('/orders/{order}/pay', [PaymentController::class, 'pay'])->name('orders.pay');
     Route::post('/payments/callback', [PaymentController::class, 'callback'])->name('payments.callback');
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::post('/orders/{order}/items/{orderItem}/confirm-availability', [OrderController::class, 'confirmAvailability'])->name('orders.items.confirm-availability');
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
 
     Route::get('/collection-slots', [CollectionSlotController::class, 'index'])->name('collection-slots.index');

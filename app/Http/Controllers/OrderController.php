@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 use Paynow\Payments\Paynow;
 use Inertia\Inertia;
 use App\Models\CollectionSlot;
+use App\Models\Ingredient;
+use App\Models\MealIngredient;
 
 class OrderController extends Controller
 {
@@ -129,6 +131,11 @@ class OrderController extends Controller
             });
         }
 
+        // Filter by specific order ID
+        if ($request->filled('order_id')) {
+            $query->where('id', $request->order_id);
+        }
+
         // Filter by date range
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
@@ -179,7 +186,7 @@ class OrderController extends Controller
         return Inertia::render('orders/index', [
             'orders' => $orders,
             'stats' => $stats,
-            'filters' => $request->only(['search', 'date_from', 'date_to', 'payment_method', 'status']),
+            'filters' => $request->only(['search', 'order_id', 'date_from', 'date_to', 'payment_method', 'status']),
         ]);
     }
 
@@ -275,12 +282,42 @@ class OrderController extends Controller
             return back()->withErrors(['completion' => 'You do not have permission to mark orders as completed']);
         }
 
+     
+
         // Reduce stock for available items in the order (in case it wasn't done during payment)
         $order->load('orderItems.meal');
+        
         foreach ($order->orderItems as $orderItem) {
             if ($orderItem->is_available && $orderItem->meal) {
+                // Get meal ingredients with quantities required
+                $mealIngredients = MealIngredient::where('meal_id', $orderItem->meal_id)->get();
+
+                // Reduce ingredient stock for each ingredient used in this meal
+                foreach ($mealIngredients as $mealIngredient) {
+                    $ingredient = $mealIngredient->ingredient;
+//dd($ingredient);
+                    if ($ingredient) {
+                        // Calculate total quantity needed: order quantity × quantity per meal
+                        $totalQuantityNeeded = $orderItem->quantity * $mealIngredient->quantity_required;
+
+                        // Reduce ingredient stock
+                        $ingredient->reduceStock($totalQuantityNeeded);
+                    
+                        Log::info("Ingredient stock reduced via order completion", [
+                            'ingredient_name' => $ingredient->name,
+                            'quantity_reduced' => $totalQuantityNeeded,
+                            'remaining_stock' => $ingredient->stock_quantity,
+                            'meal_name' => $orderItem->meal->name,
+                            'order_quantity' => $orderItem->quantity,
+                            'order_id' => $order->id,
+                        ]);
+                    }
+                }
+
+                // Also reduce the meal stock (this handles the meal-level inventory)
                 $orderItem->meal->reduceStock($orderItem->quantity);
-                Log::info("Stock reduced for meal #{$orderItem->meal->id} via completion", [
+
+                Log::info("Meal stock reduced via order completion", [
                     'meal_name' => $orderItem->meal->name,
                     'quantity_reduced' => $orderItem->quantity,
                     'remaining_stock' => $orderItem->meal->stock_quantity,
@@ -288,7 +325,7 @@ class OrderController extends Controller
                 ]);
             }
         }
-
+       
         $order->update([
             'status' => 'completed',
         ]);
