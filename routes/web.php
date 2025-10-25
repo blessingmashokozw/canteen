@@ -8,16 +8,24 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\IngredientController;
 use Inertia\Inertia;
 use App\Models\Meal;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
     $user = auth()->user();
-
+    if(!$user) {
+        return redirect()->route('login');
+    }
     // If user is authenticated and is a customer, redirect to create order
     if ($user && $user->role === 'customer') {
         return redirect()->route('orders.create');
     }
+    if($user && $user->role === 'admin' || $user->role === 'kitchen') {
+        return redirect()->route('dashboard');
+    }
+   
 
-    return Inertia::render('welcome');
+    // return Inertia::render('welcome');
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -27,6 +35,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Redirect customers to create order page
         if ($user && $user->role === 'customer') {
             return redirect()->route('orders.create');
+        }
+        if($user && $user->role === 'admin' || $user->role === 'kitchen') {
+            return redirect()->route('orders.index');
         }
 
         return Inertia::render('dashboard');
@@ -64,6 +75,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         return app(MealController::class)->updatePrice($request, $meal);
     })->name('meals.updatePrice');
+
+    Route::patch('/meals/{meal}/image', function (Request $request, Meal $meal) {
+        $user = auth()->user();
+
+        // Only admins and kitchen staff can update meal images
+        if (!$user || !in_array($user->role, ['admin', 'kitchen'])) {
+            abort(403, 'Access denied. Image updates are restricted to administrators and kitchen staff.');
+        }
+
+        return app(MealController::class)->updateImage($request, $meal);
+    })->name('meals.updateImage');
 
     Route::patch('/meals/{meal}/stock', function (Request $request, Meal $meal) {
         $user = auth()->user();

@@ -13,6 +13,7 @@ export default function AuthLayout({
 }) {
     return (
         <AuthSplitLayout title={title} description={description} {...props}>
+            
             {children}
         </AuthSplitLayout>
     );

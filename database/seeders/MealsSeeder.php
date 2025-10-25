@@ -17,6 +17,7 @@ class MealsSeeder extends Seeder
             [
                 'name' => 'Sadza and Beef',
                 'price' => 1,
+                'image' => 'images/meals/sadza-beef.jpg',
                 'ingredients' => [
                     ['name' => 'Beef Patty', 'quantity' => 1],
                     ['name' => 'Rice', 'quantity' => 0.2], // 200g of rice
@@ -25,6 +26,7 @@ class MealsSeeder extends Seeder
             [
                 'name' => 'Sadza and Chicken',
                 'price' => 1,
+                'image' => 'images/meals/sadza-chicken.jpg',
                 'ingredients' => [
                     ['name' => 'Chicken Breast', 'quantity' => 1],
                     ['name' => 'Rice', 'quantity' => 0.2],
@@ -33,6 +35,7 @@ class MealsSeeder extends Seeder
             [
                 'name' => 'Sadza and Matemba',
                 'price' => 0.80,
+                'image' => 'images/meals/sadza-matemba.jpg',
                 'ingredients' => [
                     ['name' => 'Rice', 'quantity' => 0.2],
                 ]
@@ -40,6 +43,7 @@ class MealsSeeder extends Seeder
             [
                 'name' => 'Rice and Chicken',
                 'price' => 1,
+                'image' => 'images/meals/rice-chicken.jpg',
                 'ingredients' => [
                     ['name' => 'Chicken Breast', 'quantity' => 1],
                     ['name' => 'Rice', 'quantity' => 0.3],
@@ -48,6 +52,7 @@ class MealsSeeder extends Seeder
             [
                 'name' => 'Sadza and Vegetables',
                 'price' => 0.50,
+                'image' => 'images/meals/sadza-vegetables.jpg',
                 'ingredients' => [
                     ['name' => 'Lettuce', 'quantity' => 0.5], // Half a head
                     ['name' => 'Tomato Sauce', 'quantity' => 0.1], // 100ml
@@ -56,6 +61,7 @@ class MealsSeeder extends Seeder
             [
                 'name' => 'Chips and Chicken',
                 'price' => 2.00,
+                'image' => 'images/meals/chips-chicken.jpg',
                 'ingredients' => [
                     ['name' => 'Chicken Breast', 'quantity' => 1],
                     ['name' => 'Potatoes', 'quantity' => 0.3], // 300g potatoes for chips
@@ -64,6 +70,7 @@ class MealsSeeder extends Seeder
             [
                 'name' => 'Rice and Beef',
                 'price' => 1.00,
+                'image' => 'images/meals/rice-beef.jpg',
                 'ingredients' => [
                     ['name' => 'Beef Patty', 'quantity' => 1],
                     ['name' => 'Rice', 'quantity' => 0.3],
@@ -72,6 +79,7 @@ class MealsSeeder extends Seeder
             [
                 'name' => 'Sadza and Madora',
                 'price' => 1.50,
+                'image' => 'images/meals/sadza-madora.jpg',
                 'ingredients' => [
                     ['name' => 'Rice', 'quantity' => 0.2],
                     ['name' => 'Cheese', 'quantity' => 0.1], // 100g cheese
@@ -86,6 +94,7 @@ class MealsSeeder extends Seeder
                     'price' => $mealData['price'],
                 ],
                 [
+                    'image' => $mealData['image'],
                     'stock_quantity' => 20,
                     'low_stock_threshold' => 5,
                 ]

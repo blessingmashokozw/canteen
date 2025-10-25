@@ -80,12 +80,9 @@ class OrderController extends Controller
     {
 
         
-        // Ensure status field is loaded
-        if (!$order->relationLoaded('orderItems')) {
-            $order->load(['orderItems' => function ($query) {
-                $query->select(['id', 'order_id', 'meal_id', 'status_id', 'price', 'quantity', 'is_available', 'created_at', 'updated_at']);
-            }, 'orderItems.meal', 'user', 'collectionSlot', 'payments']);
-        }
+        $order->load(['orderItems' => function ($query) {
+            $query->select(['id', 'order_id', 'meal_id', 'status_id', 'price', 'quantity', 'is_available', 'created_at', 'updated_at']);
+        }, 'orderItems.meal', 'user', 'collectionSlot', 'payments']);
 
         // Set default status if not set
         if (is_null($order->status)) {
@@ -295,28 +292,29 @@ class OrderController extends Controller
                 // Reduce ingredient stock for each ingredient used in this meal
                 foreach ($mealIngredients as $mealIngredient) {
                     $ingredient = $mealIngredient->ingredient;
-//dd($ingredient);
+
                     if ($ingredient) {
                         // Calculate total quantity needed: order quantity × quantity per meal
-                        $totalQuantityNeeded = $orderItem->quantity * $mealIngredient->quantity_required;
+                         $totalQuantityNeeded = $orderItem->quantity * $mealIngredient->quantity_required;
 
-                        // Reduce ingredient stock
+                        // // Reduce ingredient stock
                         $ingredient->reduceStock($totalQuantityNeeded);
-                    
-                        Log::info("Ingredient stock reduced via order completion", [
-                            'ingredient_name' => $ingredient->name,
-                            'quantity_reduced' => $totalQuantityNeeded,
-                            'remaining_stock' => $ingredient->stock_quantity,
-                            'meal_name' => $orderItem->meal->name,
-                            'order_quantity' => $orderItem->quantity,
-                            'order_id' => $order->id,
-                        ]);
+                  
+                        // Log::info("Ingredient stock reduced via order completion", [
+                        //     'ingredient_name' => $ingredient->name,
+                        //     'quantity_reduced' => $totalQuantityNeeded,
+                        //     'remaining_stock' => $ingredient->stock_quantity,
+                        //     'meal_name' => $orderItem->meal->name,
+                        //     'order_quantity' => $orderItem->quantity,
+                        //     'order_id' => $order->id,
+                        // ]);
+
+                       
                     }
                 }
 
                 // Also reduce the meal stock (this handles the meal-level inventory)
                 $orderItem->meal->reduceStock($orderItem->quantity);
-
                 Log::info("Meal stock reduced via order completion", [
                     'meal_name' => $orderItem->meal->name,
                     'quantity_reduced' => $orderItem->quantity,
@@ -327,7 +325,7 @@ class OrderController extends Controller
         }
        
         $order->update([
-            'status' => 'completed',
+           'status' => 'completed',
         ]);
 
         return back()->with('success', 'Order has been marked as completed');

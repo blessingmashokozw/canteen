@@ -10,7 +10,7 @@ import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
-
+import AppLogoIcon from '@/components/app-logo-icon';
 interface LoginProps {
     status?: string;
     canResetPassword: boolean;
@@ -22,8 +22,8 @@ export default function Login({ status, canResetPassword }: LoginProps) {
             title="Log in to your account"
             description="Enter your email and password below to log in"
         >
+           
             <Head title="Log in" />
-
             <Form
                 {...store.form()}
                 resetOnSuccess={['password']}

@@ -9,6 +9,7 @@ class Meal extends Model
     protected $fillable = [
         'name',
         'price',
+        'image',
         'stock_quantity',
         'low_stock_threshold',
     ];
@@ -72,15 +73,17 @@ class Meal extends Model
      */
     public function reduceStock(int $quantity): bool
     {
+        
         if ($this->stock_quantity >= $quantity) {
             // Reduce meal stock
             $this->decrement('stock_quantity', $quantity);
-
+            
             // Reduce ingredient stock for each ingredient used
-            foreach ($this->ingredients as $ingredient) {
-                $requiredQuantity = $ingredient->pivot->quantity_required * $quantity;
-                $ingredient->reduceStock($requiredQuantity);
-            }
+            // foreach ($this->ingredients as $ingredient) {
+               
+            //     $requiredQuantity = $ingredient->pivot->quantity_required * $quantity;
+            //     $ingredient->reduceStock($requiredQuantity);
+            // }
 
             return true;
         }

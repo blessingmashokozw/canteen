@@ -31,11 +31,46 @@ class MealController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100', 'unique:meals,name'],
             'price' => ['required', 'numeric', 'min:0'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
         ]);
 
-        Meal::create($validated);
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('images/meals', 'public');
+        }
+
+        Meal::create([
+            'name' => $validated['name'],
+            'price' => $validated['price'],
+            'image' => $imagePath,
+        ]);
 
         return back()->with('success', 'Meal created successfully');
+    }
+
+    /**
+     * Update the meal image.
+     */
+    public function updateImage(Request $request, Meal $meal): RedirectResponse
+    {
+        $validated = $request->validate([
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
+        ]);
+
+        $imagePath = $meal->image; // Keep existing image if no new one uploaded
+        if ($request->hasFile('image')) {
+            // Delete old image if it exists
+            if ($meal->image && \Storage::disk('public')->exists($meal->image)) {
+                \Storage::disk('public')->delete($meal->image);
+            }
+            $imagePath = $request->file('image')->store('images/meals', 'public');
+        }
+
+        $meal->update([
+            'image' => $imagePath,
+        ]);
+
+        return back()->with('success', 'Meal image updated successfully');
     }
 
     /**
@@ -76,7 +111,7 @@ class MealController extends Controller
     /**
      * Add stock to a meal (restock).
      */
-    public function addStock(Request $request, Meal $meal): RedirectResponse
+    public function addStock(Request $request, Meal $meal)
     {
         $validated = $request->validate([
             'quantity' => ['required', 'integer', 'min:1'],

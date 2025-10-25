@@ -74,9 +74,6 @@ export default function Payment({ order, payment_method, amount, payment_url, re
                                 </div>
                             </div>
 
-                            {/* Payment Method */}
-                         
-
                             {/* Action Buttons */}
                             <div className="flex gap-3">
                                 <Button
@@ -97,7 +94,21 @@ export default function Payment({ order, payment_method, amount, payment_url, re
 
                             <div className="text-xs text-muted-foreground text-center">
                                 <p>🔒 Your payment information is secure and encrypted</p>
-                                <p className="mt-1">Supported by major Singapore banks and digital wallets</p>
+                                <p className="mt-1">Supported by major Zimbabwean banks and digital wallets</p>
+                            </div>
+
+                            {/* PayNow Logo - Full Width */}
+                            <div className="border-t pt-4 mt-6">
+                                <div className="flex justify-center">
+                                    <img
+                                        src="/paynow.svg"
+                                        alt="PayNow"
+                                        className="w-100 w-auto max-w-full"
+                                    />
+                                </div>
+                                <p className="text-center text-xs text-muted-foreground mt-2">
+                                    Secure payment processing powered by PayNow
+                                </p>
                             </div>
                         </CardContent>
                     </Card>

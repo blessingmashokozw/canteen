@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, ForkKnifeCrossed, ShoppingBasket, CreditCard, Calendar, Users, Package, Menu, Search } from 'lucide-react';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
 
@@ -42,23 +42,53 @@ const mainNavItems: NavItem[] = [
         href: dashboard(),
         icon: LayoutGrid,
     },
+    {
+        title: 'Meals',
+        href: "/meals",
+        icon: ForkKnifeCrossed,
+    },
+    {
+        title: 'Ingredients',
+        href: "/ingredients",
+        icon: Package,
+    },
+    {
+        title: 'Orders',
+        href: "/orders",
+        icon: ShoppingBasket,
+    },
+    {
+        title: 'Collection Slots',
+        href: "/collection-slots",
+        icon: Calendar,
+    },
+    {
+        title: 'Users',
+        href: "/users",
+        icon: Users,
+    },
+    {
+        title: 'Payments',
+        href: "/payments",
+        icon: CreditCard,
+    },
 ];
 
 const rightNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
+    
 ];
 
 const activeItemStyles =
     'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
+
+const getFilteredNavItems = (user: any) => {
+    // For customers, only show Orders
+    if (user && user.role === 'customer') {
+        return mainNavItems.filter(item => item.title === 'Orders');
+    }
+    // For admin and kitchen staff, show all items
+    return mainNavItems;
+};
 
 interface AppHeaderProps {
     breadcrumbs?: BreadcrumbItem[];
@@ -70,7 +100,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const getInitials = useInitials();
     return (
         <>
-            <div className="border-b border-sidebar-border/80">
+            <div className="border-b border-sidebar-border/80" style={{background: '#ae333f'}}>
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Mobile Menu */}
                     <div className="lg:hidden">
@@ -97,7 +127,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                 <div className="flex h-full flex-1 flex-col space-y-4 p-4">
                                     <div className="flex h-full flex-col justify-between text-sm">
                                         <div className="flex flex-col space-y-4">
-                                            {mainNavItems.map((item) => (
+                                            {getFilteredNavItems(auth.user).map((item) => (
                                                 <Link
                                                     key={item.title}
                                                     href={item.href}
@@ -156,7 +186,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                     <div className="ml-6 hidden h-full items-center space-x-6 lg:flex">
                         <NavigationMenu className="flex h-full items-stretch">
                             <NavigationMenuList className="flex h-full items-stretch space-x-2">
-                                {mainNavItems.map((item, index) => (
+                                {getFilteredNavItems(auth.user).map((item, index) => (
                                     <NavigationMenuItem
                                         key={index}
                                         className="relative flex h-full items-center"

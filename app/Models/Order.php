@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
@@ -14,6 +15,7 @@ class Order extends Model
         'payment_method',
         'status',
         'collection_slot_id',
+        'order_code',
     ];
 
     protected $casts = [
@@ -21,6 +23,29 @@ class Order extends Model
     ];
 
     protected $appends = ['total', 'available_total'];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($order) {
+            if (empty($order->order_code)) {
+                $order->order_code = static::generateOrderCode();
+            }
+        });
+    }
+
+    /**
+     * Generate a unique 6-character alphanumeric order code
+     */
+    public static function generateOrderCode(): string
+    {
+        do {
+            $code = Str::upper(Str::random(6));
+        } while (static::where('order_code', $code)->exists());
+
+        return $code;
+    }
 
     public function user(): BelongsTo
     {

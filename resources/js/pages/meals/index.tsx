@@ -37,6 +37,10 @@ import {
     PencilIcon,
     PlusIcon,
     TrendingUpIcon,
+    ChefHatIcon,
+    ImageIcon,
+    DollarSignIcon,
+    SettingsIcon,
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -56,10 +60,12 @@ function AddMealModal() {
     const form = useForm({
         name: '',
         price: '',
+        image: null as File | null,
     });
 
     const handleSubmit = () => {
         form.post('/meals', {
+            forceFormData: true,
             onSuccess: () => {
                 setShowModal(false);
                 form.reset();
@@ -79,7 +85,7 @@ function AddMealModal() {
                 <DialogHeader>
                     <DialogTitle>Add New Meal</DialogTitle>
                     <DialogDescription>
-                        Create a new meal with name and price.
+                        Create a new meal with name, price, and optional image.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -92,6 +98,16 @@ function AddMealModal() {
                             placeholder="Enter meal name"
                         />
                         <InputError message={form.errors.name} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="image">Meal Image (Optional)</Label>
+                        <Input
+                            id="image"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => form.setData('image', e.target.files?.[0] || null)}
+                        />
+                        <InputError message={form.errors.image} />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="price">Price ($)</Label>
@@ -120,6 +136,60 @@ function AddMealModal() {
     );
 }
 
+// Update Image Modal Component
+function UpdateImageModal({ meal }: { meal: Meal }) {
+    const [showModal, setShowModal] = useState(false);
+    const form = useForm({
+        image: null as File | null,
+    });
+
+    const handleSubmit = () => {
+        form.patch(`/meals/${meal.id}/image`, {
+            forceFormData: true,
+            onSuccess: () => setShowModal(false),
+        });
+    };
+
+    return (
+        <Dialog open={showModal} onOpenChange={setShowModal}>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                    <ImageIcon className="h-4 w-4 mr-1" />
+                    Image
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Update Meal Image</DialogTitle>
+                    <DialogDescription>
+                        Update the image for {meal.name}.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="image">New Image</Label>
+                        <Input
+                            id="image"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => form.setData('image', e.target.files?.[0] || null)}
+                        />
+                        <InputError message={form.errors.image} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowModal(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleSubmit} disabled={form.processing}>
+                        Update Image
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 // Update Price Modal Component
 function UpdatePriceModal({ meal }: { meal: Meal }) {
     const [showModal, setShowModal] = useState(false);
@@ -137,7 +207,8 @@ function UpdatePriceModal({ meal }: { meal: Meal }) {
         <Dialog open={showModal} onOpenChange={setShowModal}>
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
-                    <PencilIcon className="h-4 w-4" />
+                    <DollarSignIcon className="h-4 w-4 mr-1" />
+                    Price
                 </Button>
             </DialogTrigger>
             <DialogContent>
@@ -192,7 +263,8 @@ function UpdateStockModal({ meal }: { meal: Meal }) {
         <Dialog open={showModal} onOpenChange={setShowModal}>
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
-                    <PackageIcon className="h-4 w-4" />
+                    <SettingsIcon className="h-4 w-4 mr-1" />
+                    Stock
                 </Button>
             </DialogTrigger>
             <DialogContent>
@@ -259,7 +331,8 @@ function AddStockModal({ meal }: { meal: Meal }) {
         <Dialog open={showModal} onOpenChange={setShowModal}>
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
-                    <TrendingUpIcon className="h-4 w-4" />
+                    <TrendingUpIcon className="h-4 w-4 mr-1" />
+                    Add
                 </Button>
             </DialogTrigger>
             <DialogContent>
@@ -316,6 +389,7 @@ export default function MealsIndex({ meals }: MealsIndexProps) {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>Image</TableHead>
                                     <TableHead>Name</TableHead>
                                     <TableHead className="text-right">Price ($)</TableHead>
                                     <TableHead className="text-center">Stock Status</TableHead>
@@ -326,13 +400,32 @@ export default function MealsIndex({ meals }: MealsIndexProps) {
                             <TableBody>
                                 {meals.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-muted-foreground">
+                                        <TableCell colSpan={6} className="text-center text-muted-foreground">
                                             No meals available
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     meals.map((meal) => (
                                         <TableRow key={meal.id}>
+                                            <TableCell>
+                                                <div className="flex justify-center">
+                                                    {meal.image ? (
+                                                        <img
+                                                            src={`/${meal.image}`}
+                                                            alt={meal.name}
+                                                            className="w-12 h-12 object-cover rounded-lg"
+                                                            onError={(e) => {
+                                                                (e.currentTarget as HTMLElement).style.display = 'none';
+                                                                const fallback = (e.currentTarget.nextElementSibling as HTMLElement);
+                                                                if (fallback) fallback.style.display = 'flex';
+                                                            }}
+                                                        />
+                                                    ) : null}
+                                                    <div className={`w-12 h-12 rounded-lg bg-muted flex items-center justify-center text-muted-foreground ${meal.image ? 'hidden' : ''}`}>
+                                                        <ChefHatIcon className="size-6" />
+                                                    </div>
+                                                </div>
+                                            </TableCell>
                                             <TableCell className="font-medium">{meal.name}</TableCell>
                                             <TableCell className="text-right font-bold">
                                                 ${meal.price.toFixed(2)}
@@ -363,6 +456,7 @@ export default function MealsIndex({ meals }: MealsIndexProps) {
                                                         <PackageIcon className="h-4 w-4 mr-1" />
                                                         Ingredients
                                                     </Button>
+                                                    <UpdateImageModal meal={meal} />
                                                     <UpdatePriceModal meal={meal} />
                                                     <UpdateStockModal meal={meal} />
                                                     <AddStockModal meal={meal} />

@@ -60,6 +60,7 @@ export interface Meal {
     id: number;
     name: string;
     price: number;
+    image?: string;
     stock_quantity?: number;
     low_stock_threshold?: number;
     created_at: string;
@@ -105,6 +106,7 @@ export interface Order {
     status?: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed';
     collection_slot_id?: number | null;
     collection_slot?: CollectionSlot | null;
+    order_code?: string;
     user?: User;
     order_items?: OrderItem[];
     payments?: Payment[];

@@ -45,9 +45,11 @@ class Ingredient extends Model
     /**
      * Reduce stock quantity when used in a meal.
      */
-    public function reduceStock(int $quantity): bool
+    public function reduceStock(float $quantity): bool
     {
+        // dd(["action"=> "reduceStock", "quantity"=>$quantity,"stock_quantity"=>$this->stock_quantity]);
         if ($this->stock_quantity >= $quantity) {
+           // dd($quantity);
             $this->decrement('stock_quantity', $quantity);
             return true;
         }

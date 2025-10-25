@@ -8,6 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -18,6 +27,7 @@ import {
   Package,
   Clock,
   Calendar,
+  ChefHatIcon,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import OrderItemAvailabilityModal from '@/components/order-item-availability-modal';
@@ -50,6 +60,9 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
     isOpen: boolean;
     selectedItem: any;
   }>({ isOpen: false, selectedItem: null });
+  const [slotSelectionModal, setSlotSelectionModal] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<any>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   useEffect(() => {
     // Display flash messages coming from server (if any)
@@ -101,6 +114,7 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
   }, [order.status, order.collection_slot_id]);
 
   const handleAvailabilityConfirmation = (itemId: number, available: boolean) => {
+    setIsUpdatingStatus(true);
     router.post(
       `/orders/${order.id}/items/${itemId}/confirm-availability`,
       { available },
@@ -110,16 +124,19 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
         onSuccess: (res) => {
           setSuccessMessage('Availability updated');
           setTimeout(() => setSuccessMessage(null), 3000);
+          setIsUpdatingStatus(false);
         },
         onError: () => {
           setSuccessMessage('Error updating availability');
           setTimeout(() => setSuccessMessage(null), 3000);
+          setIsUpdatingStatus(false);
         },
       }
     );
   };
 
   const handleConfirmOrder = () => {
+    setIsUpdatingStatus(true);
     router.post(
       `/orders/${order.id}/confirm`,
       {},
@@ -129,16 +146,19 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
         onSuccess: () => {
           setSuccessMessage('Order confirmed');
           setTimeout(() => setSuccessMessage(null), 3000);
+          setIsUpdatingStatus(false);
         },
         onError: () => {
           setSuccessMessage('Error confirming order');
           setTimeout(() => setSuccessMessage(null), 3000);
+          setIsUpdatingStatus(false);
         },
       }
     );
   };
 
   const handleAssignSlot = (slotId: number) => {
+    setIsUpdatingStatus(true);
     router.post(
       `/orders/${order.id}/assign-slot`,
       { collection_slot_id: slotId },
@@ -148,16 +168,19 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
         onSuccess: () => {
           setSuccessMessage('Collection slot assigned');
           setTimeout(() => setSuccessMessage(null), 3000);
+          setIsUpdatingStatus(false);
         },
         onError: () => {
           setSuccessMessage('Error assigning collection slot');
           setTimeout(() => setSuccessMessage(null), 3000);
+          setIsUpdatingStatus(false);
         },
       }
     );
   };
 
   const handleMarkAsCompleted = () => {
+    setIsUpdatingStatus(true);
     router.post(
       `/orders/${order.id}/mark-completed`,
       {},
@@ -167,10 +190,12 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
         onSuccess: () => {
           setSuccessMessage('Order marked as completed');
           setTimeout(() => setSuccessMessage(null), 3000);
+          setIsUpdatingStatus(false);
         },
         onError: () => {
           setSuccessMessage('Error marking order as completed');
           setTimeout(() => setSuccessMessage(null), 3000);
+          setIsUpdatingStatus(false);
         },
       }
     );
@@ -189,41 +214,51 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
       <Head title={`Order #${order.id}`} />
       <div className="flex h-full flex-1 flex-col gap-4 p-4">
         <div className="max-w-3xl mx-auto w-full space-y-4">
-          {/* Success Message Banner */}
-          {successMessage && (
-            <div className="fixed top-4 right-4 z-50 max-w-sm animate-in slide-in-from-top-2 duration-300">
-              <Card className="border-green-200 bg-green-50 shadow-lg">
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-3">
-                    <CheckCircleIcon className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <p className="text-green-800 font-medium">{successMessage}</p>
+          {/* Loading Modal for Order Status Updates */}
+          {isUpdatingStatus && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full mx-4">
+                <div className="text-center space-y-4">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Updating Order</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Please wait while we update your order status...
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Order Summary Header Card */}
-          <Card className="border-primary/50 bg-primary/5">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <CheckCircleIcon className="w-8 h-8 text-primary" />
-                <div>
-                  <h3 className="font-semibold text-lg">Order Placed Successfully!</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Your order has been received and is being processed.
-                  </p>
+          {/* Order Placed Successfully Card - Customer Only */}
+          {(!user || user.role === 'customer') && (
+            <Card className="border-primary/50 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <CheckCircleIcon className="w-8 h-8 text-primary" />
+                  <div>
+                    <h3 className="font-semibold text-lg">Order Placed Successfully!</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Your order has been received and is being processed.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Order Details Card */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Order #{order.id}</CardTitle>
+                  <CardTitle className="flex items-center gap-3">
+                    Order #{order.id}
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {order.order_code}
+                    </Badge>
+                  </CardTitle>
                   <CardDescription>
                     Placed on {new Date(order.created_at).toLocaleString()}
                   </CardDescription>
@@ -267,15 +302,32 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
                       : order.status || 'Unknown'}
                   </Badge>
 
-                  {order.status === 'pending' && (
-                    <Button onClick={handleConfirmOrder} className="flex items-center gap-2">
-                      <Check className="w-4 h-4" />
-                      Confirm Order
+                  {order.status === 'pending' && (user?.is_admin || user?.is_kitchen) && (
+                    <Button
+                      onClick={handleConfirmOrder}
+                      className="flex items-center gap-2"
+                      disabled={isUpdatingStatus}
+                    >
+                      {isUpdatingStatus ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Confirming...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Confirm Order
+                        </>
+                      )}
                     </Button>
                   )}
 
                   {order.status === 'confirmed' && (
-                    <Button asChild className="flex items-center gap-2">
+                    <Button
+                      asChild
+                      className="flex items-center gap-2"
+                      disabled={isUpdatingStatus}
+                    >
                       <Link href={`/orders/${order.id}/pay`}>
                         <CreditCardIcon className="w-4 h-4" />
                         Make Payment
@@ -284,16 +336,29 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
                   )}
 
                   {order.status === 'ready' && (user?.is_admin || user?.is_kitchen) && (
-                    <Button onClick={handleMarkAsCompleted} className="flex items-center gap-2">
-                      <CheckCircleIcon className="w-4 h-4" />
-                      Mark as Completed
+                    <Button
+                      onClick={handleMarkAsCompleted}
+                      className="flex items-center gap-2"
+                      disabled={isUpdatingStatus}
+                    >
+                      {isUpdatingStatus ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Completing...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircleIcon className="w-4 h-4" />
+                          Mark as Completed
+                        </>
+                      )}
                     </Button>
                   )}
                 </div>
               </div>
             </CardHeader>
 
-            <Card className="border-primary/50 bg-primary/5">
+            <div className="">
               <CardContent className="pt-6 space-y-6">
                 {/* Payment Status */}
                 <div>
@@ -402,7 +467,7 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
                       order.order_items.map((item) => (
                         <div
                           key={item.id}
-                          className={`flex items-center justify-between p-4 border rounded-lg bg-card ${
+                          className={`flex gap-4 p-4 border rounded-lg bg-card ${
                             item.is_available === false
                               ? 'border-red-200 bg-red-50/30'
                               : item.is_available === true
@@ -410,6 +475,26 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
                               : 'border-gray-200'
                           }`}
                         >
+                          {/* Meal Image */}
+                          <div className="flex-shrink-0">
+                            {item.meal?.image ? (
+                              <img
+                                src={`/${item.meal.image}`}
+                                alt={item.meal?.name}
+                                className="w-16 h-16 object-cover rounded-lg"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLElement).style.display = 'none';
+                                  const fallback = (e.currentTarget.nextElementSibling as HTMLElement);
+                                  if (fallback) fallback.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div className={`w-16 h-16 rounded-lg bg-muted flex items-center justify-center text-muted-foreground ${item.meal?.image ? 'hidden' : ''}`}>
+                              <ChefHatIcon className="size-6" />
+                            </div>
+                          </div>
+
+                          {/* Meal Details */}
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-3">
@@ -423,9 +508,24 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
                               </div>
 
                               {user && (user.is_admin || user.is_kitchen) && (
-                                <Button size="sm" variant="outline" onClick={() => openAvailabilityModal(item)} className="flex items-center gap-2">
-                                  <Settings className="w-4 h-4" />
-                                  Manage Availability
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openAvailabilityModal(item)}
+                                  className="flex items-center gap-2"
+                                  disabled={isUpdatingStatus}
+                                >
+                                  {isUpdatingStatus ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                                      Updating...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Settings className="w-4 h-4" />
+                                      Manage Availability
+                                    </>
+                                  )}
                                 </Button>
                               )}
                             </div>
@@ -456,68 +556,39 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
                   </div>
                 )}
 
-                {/* Total and Slot selection */}
-                <div className="border-t pt-4 space-y-3">
-                  <div className="flex justify-between items-center text-2xl font-bold p-4 bg-green-50 border-2 border-green-200 rounded-lg">
-                    <span className="text-green-800">Amount to Pay:</span>
-                    <span className="text-green-800">${(order.available_total || 0).toFixed(2)}</span>
-                  </div>
+                {/* Order Summary */}
+                <div className="border-t pt-6 space-y-4">
+                  <h4 className="font-semibold text-lg mb-4">Order Summary & Payment</h4>
 
-                  <div className="flex justify-between items-center text-lg">
-                    <span className="font-medium">Total Order Amount:</span>
-                    <span className="text-xl font-semibold text-muted-foreground">${(order.total || 0).toFixed(2)}</span>
-                  </div>
-
-                  {order.total !== order.available_total && (
-                    <div className="text-sm text-muted-foreground text-center p-2 bg-blue-50 border border-blue-200 rounded">
-                      💡 You save ${(order.total ?? 0) - (order.available_total ?? 0)} from unavailable items
-                    </div>
-                  )}
-
-                  {/* Slot Selection for Ready Orders */}
+                  {/* Slot Selection for Ready Orders - Moved to Top */}
                   {order.status === 'ready' && !order.collection_slot_id && (
-                    <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg">
-                      <div className="text-center space-y-4">
-                        <div className="flex items-center justify-center gap-2 text-blue-800">
-                          <Clock className="w-5 h-5" />
-                          <span className="font-medium">Select Collection Time Slot</span>
-                        </div>
-                        <p className="text-sm text-blue-700">Please select a 15-minute time slot for collecting your order</p>
-
-                        <div className="grid gap-2 sm:grid-cols-3 md:grid-cols-4">
-                          {availableSlots.map((slot) => {
-                            const isAlmostFull = slot.available_capacity <= 2;
-                            const isFull = slot.available_capacity === 0;
-
-                            return (
-                              <Button
-                                key={slot.id}
-                                variant={isFull ? 'secondary' : 'outline'}
-                                size="sm"
-                                onClick={() => !isFull && handleAssignSlot(slot.id)}
-                                disabled={isFull}
-                                className={`text-xs relative ${isFull ? 'opacity-50 cursor-not-allowed' : ''} ${isAlmostFull ? 'border-orange-300 bg-orange-50 hover:bg-orange-100' : ''}`}
-                              >
-                                <div className="flex flex-col items-center">
-                                  <span>{slot.time_range}</span>
-                                  {slot.available_capacity !== undefined && (
-                                    <span className={`text-xs mt-1 ${isAlmostFull ? 'text-orange-600' : isFull ? 'text-gray-500' : 'text-green-600'}`}>
-                                      {slot.available_capacity} left
-                                    </span>
-                                  )}
-                                </div>
-                              </Button>
-                            );
-                          })}
-                        </div>
-
-                        {isLoadingSlots && <p className="text-sm text-blue-600">Loading available slots...</p>}
-                        {!isLoadingSlots && availableSlots.length === 0 && <p className="text-sm text-blue-600">No slots available for today</p>}
+                    <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg text-center">
+                      <div className="flex items-center justify-center gap-2 text-blue-800 mb-3">
+                        <Clock className="w-5 h-5" />
+                        <span className="font-medium">Collection Time Slot Required</span>
                       </div>
+                      <p className="text-sm text-blue-700 mb-4">Please select a 15-minute time slot for collecting your order</p>
+                      <Button
+                        onClick={() => setSlotSelectionModal(true)}
+                        className="bg-blue-600 hover:bg-blue-700"
+                        disabled={isUpdatingStatus}
+                      >
+                        {isUpdatingStatus ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Updating...
+                          </>
+                        ) : (
+                          <>
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Select Time Slot
+                          </>
+                        )}
+                      </Button>
                     </div>
                   )}
 
-                  {/* Display Selected Collection Slot */}
+                  {/* Display Selected Collection Slot - Moved to Top */}
                   {order.collection_slot_id && order.collection_slot && (
                     <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
                       <div className="flex items-center justify-center gap-3 text-green-800">
@@ -527,6 +598,51 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
                           <p className="text-sm">{order.collection_slot.start_time}</p>
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Available Items Total - Primary Amount */}
+                  <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-green-800 font-semibold text-lg">Amount to Pay</span>
+                      <span className="text-green-800 font-bold text-2xl">${(order.available_total || 0).toFixed(2)}</span>
+                    </div>
+                    <p className="text-sm text-green-700">
+                      Total for available items ({order.order_items?.filter((item) => item.is_available === true).reduce((sum, item) => sum + item.quantity, 0) || 0} items)
+                    </p>
+                  </div>
+
+                  {/* Original Order Total - Secondary */}
+                  {order.total !== order.available_total && (
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-gray-600 font-medium">Original Order Total</span>
+                        <span className="text-gray-500 font-semibold text-lg">${(order.total || 0).toFixed(2)}</span>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Some items became unavailable after you placed your order
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Unavailable Items Notice */}
+                  {order.total !== order.available_total && (
+                    <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg text-center">
+                      <div className="flex items-center justify-center gap-2 text-orange-800">
+                        <span className="text-lg">⚠️</span>
+                        <span className="font-medium">
+                          Unavailable items: ${(order.total ?? 0) - (order.available_total ?? 0)} not charged
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* All Items Available - Single Amount */}
+                  {order.total === order.available_total && (
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center">
+                      <p className="text-sm text-gray-600 font-medium">
+                        All items in your order are available ✓
+                      </p>
                     </div>
                   )}
                 </div>
@@ -541,10 +657,130 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
                   </Button>
                 </div>
               </CardContent>
-            </Card>
+            </div>
           </Card>
         </div>
       </div>
+
+      {/* Slot Selection Modal */}
+      <Dialog open={slotSelectionModal} onOpenChange={setSlotSelectionModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              {selectedSlot ? 'Confirm Collection Slot' : 'Select Collection Time Slot'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedSlot
+                ? 'Please confirm your collection time slot selection.'
+                : 'Choose a 15-minute time slot for collecting your order. Slots are limited and fill up quickly.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {isLoadingSlots && (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-sm text-blue-600 mt-2">Loading available slots...</p>
+              </div>
+            )}
+
+            {!isLoadingSlots && availableSlots.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p className="font-medium">No slots available</p>
+                <p className="text-sm">Please check back later for available collection times</p>
+              </div>
+            )}
+
+            {/* Slot Selection Step */}
+            {!isLoadingSlots && availableSlots.length > 0 && !selectedSlot && (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {availableSlots.map((slot) => {
+                  const isAlmostFull = slot.available_capacity <= 2;
+                  const isFull = slot.available_capacity === 0;
+
+                  return (
+                    <Button
+                      key={slot.id}
+                      variant={isFull ? 'secondary' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedSlot(slot)}
+                      disabled={isFull}
+                      className={`text-sm relative p-4 h-auto ${isFull ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-50 hover:border-blue-300'}`}
+                    >
+                      <div className="flex flex-col items-center space-y-1">
+                        <span className="font-medium">{slot.time_range}</span>
+                        {slot.available_capacity !== undefined && (
+                          <span className={`text-xs ${isAlmostFull ? 'text-orange-600' : isFull ? 'text-gray-500' : 'text-green-600'}`}>
+                            {slot.available_capacity} slots left
+                          </span>
+                        )}
+                      </div>
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Confirmation Step */}
+            {selectedSlot && (
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg text-center">
+                  <div className="flex items-center justify-center gap-2 text-blue-800 mb-2">
+                    <Calendar className="w-5 h-5" />
+                    <span className="font-medium">Selected Time Slot</span>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-blue-900">{selectedSlot.time_range}</p>
+                    <p className="text-sm text-blue-700 mt-1">
+                      {selectedSlot.available_capacity} slots remaining
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-center text-sm text-muted-foreground">
+                  <p>By confirming this slot, you agree to collect your order within the selected 15-minute window.</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => {
+              setSlotSelectionModal(false);
+              setSelectedSlot(null);
+            }}>
+              {selectedSlot ? 'Back' : 'Cancel'}
+            </Button>
+
+            {selectedSlot && (
+              <Button
+                onClick={() => {
+                  handleAssignSlot(selectedSlot.id);
+                  setSlotSelectionModal(false);
+                  setSelectedSlot(null);
+                }}
+                className="bg-green-600 hover:bg-green-700"
+                disabled={isUpdatingStatus}
+              >
+                {isUpdatingStatus ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Confirming...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Confirm Slot
+                  </>
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Availability Modal */}
       <OrderItemAvailabilityModal

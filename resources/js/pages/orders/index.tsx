@@ -381,6 +381,7 @@ export default function OrdersIndex({ orders, stats, filters: initialFilters }: 
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Order #</TableHead>
+                                        <TableHead>Code</TableHead>
                                         <TableHead>Date</TableHead>
                                         <TableHead>Customer</TableHead>
                                         <TableHead>Items</TableHead>
@@ -393,7 +394,7 @@ export default function OrdersIndex({ orders, stats, filters: initialFilters }: 
                                 <TableBody>
                                     {orders.data.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="h-24 text-center">
+                                            <TableCell colSpan={9} className="h-24 text-center">
                                                 No orders found.
                                             </TableCell>
                                         </TableRow>
@@ -401,6 +402,11 @@ export default function OrdersIndex({ orders, stats, filters: initialFilters }: 
                                         orders.data.map((order) => (
                                             <TableRow key={order.id}>
                                                 <TableCell className="font-medium">#{order.id}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="font-mono text-xs">
+                                                        {order.order_code || 'N/A'}
+                                                    </Badge>
+                                                </TableCell>
                                                 <TableCell>
                                                     <div>{formatDate(order.created_at)}</div>
                                                     <div className="text-sm text-muted-foreground">
@@ -459,10 +465,12 @@ export default function OrdersIndex({ orders, stats, filters: initialFilters }: 
                                                     >
                                                         {order.payment_method === 'CASH' ? (
                                                             <BanknoteIcon className="mr-1 h-3 w-3" />
+                                                        ) : order.payment_method === 'ONLINE_PAYMENT' ? (
+                                                            <CreditCardIcon className="mr-1 h-3 w-3" />
                                                         ) : (
                                                             <CreditCardIcon className="mr-1 h-3 w-3" />
                                                         )}
-                                                        {order.payment_method.toLowerCase().replace('_', ' ')}
+                                                        {order.payment_method?.toLowerCase().replace('_', ' ') || 'Unknown'}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
