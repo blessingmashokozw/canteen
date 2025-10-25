@@ -96,6 +96,14 @@ export interface Payment {
     paynow_response?: string;
     created_at: string;
     updated_at: string;
+    order?: {
+        id: number;
+        order_code?: string;
+        user?: {
+            name: string;
+            email: string;
+        };
+    };
 }
 
 export interface Order {

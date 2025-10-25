@@ -20,7 +20,7 @@ class PaymentController extends Controller
     public function index(Request $request): InertiaResponse
     {
         $query = Payment::with(['order' => function ($query) {
-            $query->select(['id', 'user_id', 'status', 'created_at']);
+            $query->select(['id', 'user_id', 'status', 'order_code', 'created_at']);
         }, 'order.user']);
 
         // Filter by date range

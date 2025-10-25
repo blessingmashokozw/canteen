@@ -2,29 +2,20 @@ import { Head } from '@inertiajs/react';
 import { usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-interface Payment {
-    id: number;
-    order_id: number;
-    payment_method: string;
-    amount: number;
-    status: string;
-    created_at: string;
-    paid_at?: string;
-    order?: {
-        id: number;
-        user?: {
-            name: string;
-            email: string;
-        };
-    };
-}
+import { Badge } from '@/components/ui/badge';
+import { type Payment } from '@/types';
 
 interface PaymentsPageProps {
     payments: {
@@ -54,8 +45,12 @@ interface PaymentsPageProps {
 export default function PaymentsIndex({ payments, stats, filters }: PaymentsPageProps) {
     const { url } = usePage();
     const [showFilters, setShowFilters] = useState(false);
+    const [paymentModal, setPaymentModal] = useState<{
+        isOpen: boolean;
+        payment: Payment | null;
+    }>({ isOpen: false, payment: null });
 
-    const handleFilterSubmit = (e: React.FormEvent) => {
+    const handleFilterSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.target as HTMLFormElement);
         const params = new URLSearchParams();
@@ -69,6 +64,14 @@ export default function PaymentsIndex({ payments, stats, filters }: PaymentsPage
 
     const clearFilters = () => {
         window.location.href = url.split('?')[0];
+    };
+
+    const openPaymentModal = (payment: Payment) => {
+        setPaymentModal({ isOpen: true, payment });
+    };
+
+    const closePaymentModal = () => {
+        setPaymentModal({ isOpen: false, payment: null });
     };
 
     const getStatusBadgeVariant = (status: string) => {
@@ -286,25 +289,29 @@ export default function PaymentsIndex({ payments, stats, filters }: PaymentsPage
                                 <thead>
                                     <tr className="border-b bg-muted/50">
                                         <th className="p-2 text-left font-medium">Payment ID</th>
-                                        <th className="p-2 text-left font-medium">Order</th>
+                                        <th className="p-2 text-left font-medium">Payment Reference</th>
+                                        <th className="p-2 text-left font-medium">Order Code</th>
                                         <th className="p-2 text-left font-medium">Customer</th>
                                         <th className="p-2 text-left font-medium">Amount</th>
                                         <th className="p-2 text-left font-medium">Method</th>
                                         <th className="p-2 text-left font-medium">Status</th>
                                         <th className="p-2 text-left font-medium">Date</th>
+                                        <th className="p-2 text-left font-medium">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {payments.data.map((payment) => (
-                                        <tr key={payment.id} className="border-b">
+                                        <tr
+                                            key={payment.id}
+                                            className="border-b hover:bg-muted/50 cursor-pointer"
+                                            onClick={() => openPaymentModal(payment)}
+                                        >
                                             <td className="p-2 font-mono text-xs">#{payment.id}</td>
-                                            <td className="p-2">
-                                                <a
-                                                    href={`/orders/${payment.order_id}`}
-                                                    className="text-blue-600 hover:underline text-xs"
-                                                >
-                                                    Order #{payment.order_id}
-                                                </a>
+                                            <td className="p-2 font-mono text-xs text-blue-600">
+                                                {payment.hash || 'N/A'}
+                                            </td>
+                                            <td className="p-2 font-mono text-xs text-purple-600">
+                                                {payment.order?.order_code || 'N/A'}
                                             </td>
                                             <td className="p-2">
                                                 {payment.order?.user ? (
@@ -330,6 +337,19 @@ export default function PaymentsIndex({ payments, stats, filters }: PaymentsPage
                                                         Paid: {new Date(payment.paid_at).toLocaleDateString()}
                                                     </div>
                                                 )}
+                                            </td>
+                                            <td className="p-2">
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        openPaymentModal(payment);
+                                                    }}
+                                                    className="text-xs"
+                                                >
+                                                    View Details
+                                                </Button>
                                             </td>
                                         </tr>
                                     ))}
@@ -362,6 +382,115 @@ export default function PaymentsIndex({ payments, stats, filters }: PaymentsPage
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Payment Details Modal */}
+            <Dialog open={paymentModal.isOpen} onOpenChange={closePaymentModal}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            Payment Details
+                            <Badge variant={paymentModal.payment ? getStatusBadgeVariant(paymentModal.payment.status) : 'secondary'}>
+                                {paymentModal.payment?.status}
+                            </Badge>
+                        </DialogTitle>
+                        <DialogDescription>
+                            Complete information about this payment
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {paymentModal.payment && (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">Payment ID</Label>
+                                    <div className="font-mono text-sm">#{paymentModal.payment.id}</div>
+                                </div>
+                                <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">Payment Reference</Label>
+                                    <div className="font-mono text-sm text-blue-600">
+                                        {paymentModal.payment.hash || 'N/A'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">Order Code</Label>
+                                    <div className="font-mono text-sm text-purple-600">
+                                        {paymentModal.payment.order?.order_code || 'N/A'}
+                                    </div>
+                                </div>
+                                <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">Customer</Label>
+                                    <div className="text-sm">
+                                        {paymentModal.payment.order?.user ? (
+                                            <div>
+                                                <div className="font-medium">{paymentModal.payment.order.user.name}</div>
+                                                <div className="text-muted-foreground">{paymentModal.payment.order.user.email}</div>
+                                            </div>
+                                        ) : (
+                                            'N/A'
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">Amount</Label>
+                                    <div className="text-lg font-semibold">${Number(paymentModal.payment.amount).toFixed(2)}</div>
+                                </div>
+                                <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">Method</Label>
+                                    <div className="text-sm capitalize">{paymentModal.payment.payment_method}</div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">Created</Label>
+                                    <div className="text-sm">{new Date(paymentModal.payment.created_at).toLocaleString()}</div>
+                                </div>
+                                <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+                                    <div>
+                                        <Badge variant={getStatusBadgeVariant(paymentModal.payment.status)} className="text-xs">
+                                            {paymentModal.payment.status}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {paymentModal.payment.paid_at && (
+                                <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">Paid At</Label>
+                                    <div className="text-sm text-green-600">
+                                        {new Date(paymentModal.payment.paid_at).toLocaleString()}
+                                    </div>
+                                </div>
+                            )}
+
+                            {paymentModal.payment.payment_url && (
+                                <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">Payment URL</Label>
+                                    <div className="text-xs font-mono text-blue-600 break-all">
+                                        {paymentModal.payment.payment_url}
+                                    </div>
+                                </div>
+                            )}
+
+                            {paymentModal.payment.paynow_response && (
+                                <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">PayNow Response</Label>
+                                    <div className="text-xs bg-muted p-2 rounded font-mono">
+                                        <pre>{JSON.stringify(JSON.parse(paymentModal.payment.paynow_response), null, 2)}</pre>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

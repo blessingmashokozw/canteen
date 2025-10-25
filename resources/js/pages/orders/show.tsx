@@ -507,7 +507,7 @@ export default function OrderShow({ order, user, flash }: OrderShowProps) {
                                 </Badge>
                               </div>
 
-                              {user && (user.is_admin || user.is_kitchen) && (
+                              {user && (user.is_admin || user.is_kitchen) && order.status !== 'completed' && (
                                 <Button
                                   size="sm"
                                   variant="outline"
