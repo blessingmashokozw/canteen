@@ -12,8 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import InputError from '@/components/input-error';
+import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
-import { MinusIcon, PlusIcon, ShoppingCartIcon, TrashIcon, BanknoteIcon, CreditCardIcon, ChefHatIcon, CheckIcon, SearchIcon } from 'lucide-react';
+import { MinusIcon, PlusIcon, ShoppingCartIcon, TrashIcon, BanknoteIcon, CreditCardIcon, ChefHatIcon, CheckIcon, SearchIcon, AlertTriangleIcon } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -42,6 +43,7 @@ export default function OrderCreate({ meals }: OrderCreateProps) {
     const [showNotification, setShowNotification] = useState<{id: number, name: string} | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [outOfStockNotification, setOutOfStockNotification] = useState<{meal: any} | null>(null);
+    const [lowStockNotification, setLowStockNotification] = useState<{meal: any} | null>(null);
     
     const { data, setData, post, processing, errors } = useForm({
         instructions: '',
@@ -49,9 +51,47 @@ export default function OrderCreate({ meals }: OrderCreateProps) {
         items: [] as OrderItem[],
     });
 
+    const isMealInStock = (meal: any): boolean => {
+        // First check if meal has stock
+        if (!meal.stock_quantity || meal.stock_quantity <= 0) {
+            return false;
+        }
+
+        // Then check if all required ingredients are available
+        if (meal.ingredients) {
+            for (const ingredient of meal.ingredients) {
+                const requiredQuantity = ingredient.pivot?.quantity_required || 0;
+                if (!ingredient.stock_quantity || ingredient.stock_quantity < requiredQuantity) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    };
+
     const addItem = (mealId: number) => {
-        const newItems = new Map(selectedItems);
         const meal = meals.find(m => m.id === mealId);
+
+        if (!meal) {
+            return;
+        }
+
+        // Check if meal is in stock using the helper function
+        if (!isMealInStock(meal)) {
+            setOutOfStockNotification({ meal });
+            setTimeout(() => setOutOfStockNotification(null), 3000);
+            return;
+        }
+
+        // Check if meal is low on stock and show warning
+        const isLowStock = meal.stock_quantity !== undefined && meal.stock_quantity <= (meal.low_stock_threshold || 5) && meal.stock_quantity > 0;
+        if (isLowStock) {
+            setLowStockNotification({ meal });
+            setTimeout(() => setLowStockNotification(null), 3000);
+        }
+
+        const newItems = new Map(selectedItems);
         newItems.set(mealId, (newItems.get(mealId) || 0) + 1);
         setSelectedItems(newItems);
         updateFormItems(newItems);
@@ -60,10 +100,7 @@ export default function OrderCreate({ meals }: OrderCreateProps) {
         setAnimatingItems(prev => new Set(prev).add(mealId));
         setCartAnimation(true);
 
-        if (meal) {
-            setShowNotification({ id: mealId, name: meal.name });
-            setTimeout(() => setShowNotification(null), 2000);
-        }
+        setShowNotification({ id: mealId, name: meal.name });
 
         // Clear animations after delay
         setTimeout(() => {
@@ -126,6 +163,26 @@ export default function OrderCreate({ meals }: OrderCreateProps) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Create Order" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4 relative">
+                {/* Low Stock Notification */}
+                {lowStockNotification && (
+                    <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+                        <div className="bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-pulse">
+                            <AlertTriangleIcon className="size-4" />
+                            <span className="font-medium">{lowStockNotification.meal.name} is running low on stock</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Out of Stock Notification */}
+                {outOfStockNotification && (
+                    <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+                        <div className="bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-pulse">
+                            <AlertTriangleIcon className="size-4" />
+                            <span className="font-medium">{outOfStockNotification.meal.name} is currently out of stock</span>
+                        </div>
+                    </div>
+                )}
+
                 {/* Notification */}
                 {showNotification && (
                     <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
@@ -185,7 +242,7 @@ export default function OrderCreate({ meals }: OrderCreateProps) {
                                             animatingItems.has(meal.id)
                                                 ? 'ring-2 ring-green-400 ring-offset-2 shadow-green-200 shadow-lg scale-105 animate-pulse'
                                                 : ''
-                                        }`}
+                                        } ${!isMealInStock(meal) ? 'opacity-60 border-red-200 bg-red-50' : meal.stock_quantity !== undefined && meal.stock_quantity <= (meal.low_stock_threshold || 5) && meal.stock_quantity > 0 ? 'border-yellow-200 bg-yellow-50' : ''}`}
                                     >
                                         <div className="aspect-[4/3] overflow-hidden">
                                             {meal.image ? (
@@ -210,7 +267,21 @@ export default function OrderCreate({ meals }: OrderCreateProps) {
 
                                         <div className="p-4">
                                             <div className="mb-4">
-                                                <h3 className="font-semibold text-lg mb-2 line-clamp-1">{meal.name}</h3>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h3 className="font-semibold text-lg line-clamp-1">{meal.name}</h3>
+                                                    <div className="flex gap-2">
+                                                        {!isMealInStock(meal) && (
+                                                            <Badge variant="destructive" className="text-xs">
+                                                                Out of Stock
+                                                            </Badge>
+                                                        )}
+                                                        {isMealInStock(meal) && meal.stock_quantity !== undefined && meal.stock_quantity <= (meal.low_stock_threshold || 5) && meal.stock_quantity > 0 && (
+                                                            <Badge variant="default" className="text-xs">
+                                                                Low Stock
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                </div>
                                                 <span className="text-2xl font-bold text-primary">
                                                     ${meal.price.toFixed(2)}
                                                 </span>
@@ -222,14 +293,28 @@ export default function OrderCreate({ meals }: OrderCreateProps) {
                                                 className={`w-full shadow-sm hover:shadow-md transition-all duration-200 ${
                                                     animatingItems.has(meal.id)
                                                         ? 'bg-green-500 hover:bg-green-600 text-white animate-bounce'
+                                                        : !isMealInStock(meal)
+                                                        ? 'bg-gray-400 hover:bg-gray-500 cursor-not-allowed'
+                                                        : meal.stock_quantity !== undefined && meal.stock_quantity <= (meal.low_stock_threshold || 5) && meal.stock_quantity > 0
+                                                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
                                                         : 'bg-primary hover:bg-primary/90'
                                                 }`}
-                                                disabled={animatingItems.has(meal.id)}
+                                                disabled={animatingItems.has(meal.id) || !isMealInStock(meal)}
                                             >
                                                 {animatingItems.has(meal.id) ? (
                                                     <>
                                                         <CheckIcon className="size-4 mr-1" />
                                                         Added!
+                                                    </>
+                                                ) : !isMealInStock(meal) ? (
+                                                    <>
+                                                        <AlertTriangleIcon className="size-4 mr-1" />
+                                                        Out of Stock
+                                                    </>
+                                                ) : meal.stock_quantity !== undefined && meal.stock_quantity <= (meal.low_stock_threshold || 5) && meal.stock_quantity > 0 ? (
+                                                    <>
+                                                        <AlertTriangleIcon className="size-4 mr-1" />
+                                                        Low Stock
                                                     </>
                                                 ) : (
                                                     <>

@@ -23,7 +23,7 @@ class OrderController extends Controller
      */
     public function create()
     {
-        $meals = Meal::orderBy('name')->get();
+        $meals = Meal::with('ingredients')->orderBy('name')->get();
 
         return Inertia::render('orders/create', [
             'meals' => $meals,
